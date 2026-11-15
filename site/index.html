@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NW3D-01 – instalace firmwaru</title>
+<meta name="description" content="Nahrání firmwaru do robota NW3D-01 (Waveshare ESP32-S3-DualEye-LCD-1.28) přímo z prohlížeče.">
+<script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+<style>
+:root{--bg:#0d1216;--card:#151d23;--line:#25323c;--txt:#e9eef1;--dim:#8396a6;--acc:#18e0d8;--amb:#ffb020}
+*{box-sizing:border-box}html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px 40px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:28px;margin:0}h1 b{color:var(--acc)}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0 0 10px}
+.lead{color:var(--dim);margin:6px 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+ol{margin:0;padding-left:22px}li{margin:6px 0}
+.lang button{font:inherit;font-size:13px;color:var(--txt);background:#1c262e;border:1px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer}
+.lang button.on{background:var(--acc);color:#04201f;border-color:var(--acc)}
+.install{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 18px}
+esp-web-install-button button{font:600 18px system-ui,sans-serif;color:#04201f;background:var(--acc);border:0;border-radius:12px;padding:14px 34px;cursor:pointer}
+.warn{color:var(--amb)}.dim{color:var(--dim)}.small{font-size:14px}
+code{background:#0a1014;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+a{color:var(--acc)}
+footer{color:var(--dim);font-size:13px;text-align:center;margin-top:24px}
+[data-l="en"]{display:none}body.en [data-l="en"]{display:revert}body.en [data-l="cs"]{display:none}
+</style>
+</head>
+<body>
+<main>
+<header><h1>NW3D-<b>01</b></h1><span class="lang"><button id="bcs" class="on">CS</button> <button id="ben">EN</button></span></header>
+<p class="lead"><span data-l="cs">Stolní robot, který očima ukazuje průběh tisku na tiskárně Bambu Lab, hodiny, počasí a kurzy. Tady do něj nahraješ firmware – bez instalace programů.</span>
+<span data-l="en">A desk robot whose eyes show your Bambu Lab print progress, a clock, weather and tickers. Install its firmware right here – no software to install.</span></p>
+
+<section class="card">
+ <h2><span data-l="cs">Co potřebuješ</span><span data-l="en">What you need</span></h2>
+ <ul>
+  <li data-l="cs">desku <b>Waveshare ESP32-S3-DualEye-LCD-1.28</b> (dva kulaté displeje),</li>
+  <li data-l="en">a <b>Waveshare ESP32-S3-DualEye-LCD-1.28</b> board (two round displays),</li>
+  <li data-l="cs"><b>datový</b> kabel USB-C (některé kabely jen nabíjejí),</li>
+  <li data-l="en">a USB-C <b>data</b> cable (some cables only charge),</li>
+  <li data-l="cs">počítač s prohlížečem <b>Chrome</b> nebo <b>Edge</b> (případně Android s Chrome). iPhone a Safari to neumí.</li>
+  <li data-l="en">a computer with <b>Chrome</b> or <b>Edge</b> (or Android with Chrome). iPhone and Safari are not supported.</li>
+ </ul>
+</section>
+
+<section class="card install">
+ <esp-web-install-button manifest="firmware/manifest.json">
+  <button slot="activate"><span data-l="cs">Nainstalovat firmware</span><span data-l="en">Install firmware</span></button>
+  <span slot="unsupported" class="warn"><span data-l="cs">Tento prohlížeč neumí USB. Použij Chrome nebo Edge na počítači.</span><span data-l="en">This browser has no USB support. Use Chrome or Edge on a computer.</span></span>
+  <span slot="not-allowed" class="warn"><span data-l="cs">Stránka musí běžet přes https.</span><span data-l="en">The page must be served over https.</span></span>
+ </esp-web-install-button>
+ <div class="small dim" id="ver"></div>
+</section>
+
+<section class="card">
+ <h2><span data-l="cs">Postup</span><span data-l="en">Steps</span></h2>
+ <ol data-l="cs">
+  <li>Připoj desku kabelem k počítači.</li>
+  <li>Klikni na <b>Nainstalovat firmware</b> a vyber port desky (obvykle <code>USB JTAG/serial debug unit</code>).</li>
+  <li>Potvrď instalaci. Při první instalaci nech zaškrtnuté smazání zařízení. Nahrávání trvá asi minutu.</li>
+  <li>Po nahrání zadej <b>Wi-Fi a heslo</b> (jen síť 2,4 GHz). Robot se připojí a ukáže odkaz.</li>
+  <li>Otevři <b>http://nw3d-robot.local</b> a projdi průvodce: jazyk, přihlášení k Bambu účtu, výběr tiskárny a město pro počasí.</li>
+ </ol>
+ <ol data-l="en">
+  <li>Connect the board to your computer.</li>
+  <li>Click <b>Install firmware</b> and pick the board's port (usually <code>USB JTAG/serial debug unit</code>).</li>
+  <li>Confirm. On the first install keep "erase device" checked. Flashing takes about a minute.</li>
+  <li>Then enter your <b>Wi-Fi and password</b> (2.4 GHz only). The robot connects and shows a link.</li>
+  <li>Open <b>http://nw3d-robot.local</b> and follow the wizard: language, Bambu account sign-in, printer and your city for the weather.</li>
+ </ol>
+ <p class="small dim"><span data-l="cs">Bez počítače: po nahrání se robot, který nezná Wi-Fi, ozve vlastní sítí <b>NW3D-xxxx</b>. Připoj se k ní telefonem a otevře se nastavení.</span>
+ <span data-l="en">Without a computer: a robot that knows no Wi-Fi opens its own network <b>NW3D-xxxx</b>. Join it with your phone and the setup page opens.</span></p>
+</section>
+
+<section class="card">
+ <h2><span data-l="cs">Když to nejde</span><span data-l="en">Troubleshooting</span></h2>
+ <ul class="small">
+  <li data-l="cs">Port se nenabízí: zkus jiný kabel nebo USB port. Na Windows 10/11 není potřeba žádný ovladač.</li>
+  <li data-l="en">No port offered: try another cable or USB port. Windows 10/11 needs no driver.</li>
+  <li data-l="cs">Nahrávání se nespojí: podrž tlačítko <b>BOOT</b>, krátce stiskni <b>RESET</b>, BOOT pusť a zkus to znovu.</li>
+  <li data-l="en">Flashing cannot connect: hold <b>BOOT</b>, tap <b>RESET</b>, release BOOT and try again.</li>
+  <li data-l="cs"><code>nw3d-robot.local</code> se neotevře (některé Androidy): použij IP adresu, kterou ukáže pravé oko robota.</li>
+  <li data-l="en"><code>nw3d-robot.local</code> does not open (some Android phones): use the IP address shown on the robot's right eye.</li>
+  <li data-l="cs">Další verze se instalují přímo z webu robota (Aktualizace → Nainstalovat).</li>
+  <li data-l="en">Later versions install from the robot's web page (Updates → Install).</li>
+ </ul>
+</section>
+
+<footer>
+ <a href="https://github.com/Frenkeeone/nw3d-01">GitHub</a> ·
+ <span data-l="cs">Firmware MIT, modely CC BY-NC-SA 4.0. Neoficiální projekt, není spojený s Bambu Lab.</span>
+ <span data-l="en">Firmware MIT, models CC BY-NC-SA 4.0. Unofficial project, not affiliated with Bambu Lab.</span>
+</footer>
+</main>
+<script>
+function setLang(en){document.body.classList.toggle('en',en);document.documentElement.lang=en?'en':'cs';
+ document.getElementById('bcs').classList.toggle('on',!en);document.getElementById('ben').classList.toggle('on',en);
+ try{localStorage.setItem('lang',en?'en':'cs')}catch(e){}}
+document.getElementById('bcs').onclick=()=>setLang(false);document.getElementById('ben').onclick=()=>setLang(true);
+let saved=null;try{saved=localStorage.getItem('lang')}catch(e){}
+setLang(saved?saved=='en':!/^(cs|sk)/i.test(navigator.language||''));
+fetch('firmware/manifest.json').then(r=>r.json()).then(m=>{document.getElementById('ver').textContent='firmware '+m.version}).catch(()=>{
+ document.getElementById('ver').textContent='firmware: –'});
+</script>
+</body>
+</html>

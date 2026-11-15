@@ -1,0 +1,58 @@
+# NW3D-01 – models and assembly
+
+Česky: [README.cs.md](README.cs.md).
+
+Overall height 165 mm (about 168 mm with feet), head 124 × 84 × 64 mm. The electronics is one Waveshare ESP32-S3-DualEye-LCD-1.28 board sitting in the head. **Do not split the board.**
+
+Folders: `stl/` (print files, already in print orientation), `3mf/` (multi-colour parts with filaments assigned), `step/` (for editing in CAD), `src/` (CadQuery scripts that generate everything), `images/` (renders).
+
+## Before printing the whole head
+Print `00_test_oko.stl` (a slice of the face with one eye and two posts) and `02b_drzak_oka_pravy.stl`, then check:
+- the display bezel (Ø 36.5 mm) including the connector bump (39 mm in total, recess on the inside of the eye) fits the pocket and the eye is centred in the opening,
+- the bracket pulls the board against the face. The model assumes the top of the M2 brass standoffs is **8.0 mm** behind the display face (`BRASS_TOP` in `src/robot.py`).
+
+If it is off by more than about 0.5 mm, change `BRASS_TOP` and run `python3 src/export.py` (needs `pip install cadquery`). The posts are 0.5 mm lower than the bracket on purpose so the bracket presses the display gently. Do not overtighten.
+
+## Parts and print orientation
+All parts print **without supports**. Recommended: PLA (the prototype uses Bambu PLA Basic Light Gray), PETG or ASA; 0.2 mm layers, 4 walls, 15–20 % gyroid infill. The main colour takes about 250 g.
+
+| File | Qty | Notes |
+|---|---|---|
+| 01_hlava (head) | 1 | face down |
+| 3mf/01_hlava_s_pruhem.3mf | 1 | head + warning stripe as one object with three parts (filament 1 main colour, 2 yellow, 3 black). STLs 01a/01b are a fallback |
+| 02_prstenec_oka (eye ring) | **2** | glue into the pockets in the face |
+| 02a / 02b eye bracket left / right | 1+1 | flat, mirrored |
+| 03_zadni_viko (back cover) | 1 | inner side down |
+| 04_antena (antenna) | 1 | knob down (STL already flipped); push into the hole in the top |
+| 05_krk (neck) | 1 | flange down |
+| 06_telo (body) | 1 | upside down |
+| 06a_logo | 1 | separate colour (cyan), face down; glue into the chest pocket (1 mm deep, logo sticks out 0.6 mm, 0.15 mm clearance). Replace with your own emblem |
+| 07_spodni_viko (bottom plate) | 1 | bottom side down |
+| 3mf/08_slepe_oko.3mf | optional | **blind eye cap** instead of a ring when one display is broken: covers it and shows a printed eye (3 parts: ring, black, cyan) |
+| 3mf/09_monokl.3mf | optional | **cracked "black eye" ring** for a broken display: purple ring with cracks, a chipped edge and a missing bolt (2 parts: purple, black). Designed for the left eye as seen from the front; mirror on X for the right eye |
+
+## Hardware
+- 16× screw **M3 × 8** hex socket
+- 16× heat-set insert **M3, OD 4.5 mm, length 4 mm** (hole 4.25 mm, depth 7.5 mm): back cover 4×, eye bracket posts 4×, body bottom 4×, body top 2×, neck 2×
+- 4× screw **M2 × 6**, only into the board's brass standoffs (no M2 inserts needed)
+- 4× silicone foot Ø 11 mm
+- a piece of foam double-sided tape (speaker)
+- super glue (eye rings, logo)
+- USB-C cable, ideally thin and flexible, optionally with an angled plug
+
+## Electronics and cabling
+- The board sits in the head with the displays facing forward. The USB-C connector on the middle bridge points down; the face has a channel for the plug.
+- The cable runs through the bottom of the head, the neck and the body, out of the hole at the back bottom of the body.
+- Stick the speaker that comes with the board to the inside of the back cover, behind the vent slots.
+- Optional: a 3.7 V Li-Po cell in the body, wire through the neck to the BAT connector (MX1.25).
+
+## Assembly
+1. Melt in the M3 inserts (posts in the head, head corners, body, neck).
+2. Insert the board into the head from the back, display bezels into the pockets in the face.
+3. Screw a bracket on each eye: 2× M2 into the board's brass standoffs, then 2× M3 into the posts. Tighten gently.
+4. Screw the neck onto the body (2× M3), pass the cable through the neck.
+5. Put the head on the neck and fix it with 2× M3 through the bottom of the head (from the back, before the cover goes on).
+6. Speaker on the back cover, cover 4× M3. Bottom plate 4× M3.
+7. Eye rings, logo, antenna, feet.
+
+Flash the firmware before closing the head: [frenkeeone.github.io/nw3d-01](https://frenkeeone.github.io/nw3d-01/).

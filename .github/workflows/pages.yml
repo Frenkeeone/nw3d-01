@@ -1,0 +1,65 @@
+# Instalacni stranka na GitHub Pages: obsah slozky site/ + firmware z posledniho vydani.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Site + latest firmware
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p _site/firmware
+          cp -r site/* _site/
+          TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName' || true)
+          if [ -n "$TAG" ]; then
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern nw3d-01-full.bin --dir _site/firmware
+            V="${TAG#v}"
+          else
+            V="none"
+          fi
+          cat > _site/firmware/manifest.json <<JSON
+          {
+            "name": "NW3D-01",
+            "version": "$V",
+            "new_install_prompt_erase": true,
+            "new_install_improv_wait_time": 20,
+            "builds": [
+              { "chipFamily": "ESP32-S3", "parts": [ { "path": "nw3d-01-full.bin", "offset": 0 } ] }
+            ]
+          }
+          JSON
+          cat _site/firmware/manifest.json
+          ls -la _site _site/firmware
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

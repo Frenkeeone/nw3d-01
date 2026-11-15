@@ -1,0 +1,81 @@
+# Sestaveni firmwaru. Pri znacce v* (napr. v2.0.1) vytvori vydani na GitHubu
+# a obnovi instalacni stranku.
+name: Firmware
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: ["firmware/**", ".github/workflows/firmware.yml"]
+  pull_request:
+    paths: ["firmware/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            firmware/.pio/libdeps
+          key: pio-${{ hashFiles('firmware/platformio.ini') }}
+
+      - name: Install tools
+        run: pip install platformio esptool
+
+      - name: Version
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        working-directory: firmware
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFW_VERSION=\"${{ steps.ver.outputs.version }}\"
+        run: pio run
+
+      - name: Merge image
+        working-directory: firmware
+        run: |
+          B=.pio/build/dualeye
+          APP0=$(find ~/.platformio/packages -name boot_app0.bin | head -1)
+          mkdir -p ../out
+          python -m esptool --chip esp32s3 merge_bin -o ../out/nw3d-01-full.bin \
+            --flash_mode keep --flash_freq keep --flash_size 16MB \
+            0x0 $B/bootloader.bin 0x8000 $B/partitions.bin 0xe000 "$APP0" 0x10000 $B/firmware.bin
+          cp $B/firmware.bin ../out/nw3d-01-ota.bin
+          ls -la ../out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nw3d-01-firmware-${{ steps.ver.outputs.version }}
+          path: out/*.bin
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PRE=""
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then PRE="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" out/nw3d-01-full.bin out/nw3d-01-ota.bin \
+            --title "NW3D-01 $GITHUB_REF_NAME" $PRE --generate-notes \
+            --notes "Instalace / install: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/ · nw3d-01-full.bin = celý obraz (webová instalace, adresa 0x0) · nw3d-01-ota.bin = aktualizace přes web robota"
+          gh workflow run pages.yml --ref main

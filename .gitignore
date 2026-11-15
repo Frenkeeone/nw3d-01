@@ -1,0 +1,8 @@
+firmware/.pio/
+.pio/
+__pycache__/
+*.pyc
+cad/info.pkl
+_site/
+out/
+.DS_Store
