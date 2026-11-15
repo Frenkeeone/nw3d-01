@@ -56,7 +56,7 @@ VS Code + rozšíření PlatformIO, otevři složku `firmware` a dej *Upload*. S
 | `web.*`, `web_page.h` | webové rozhraní a API |
 
 ## Vydání nové verze
-V repozitáři stačí vytvořit značku `vX.Y.Z` (např. `git tag v2.0.1 && git push --tags`). GitHub Actions firmware sestaví, vytvoří vydání se soubory `nw3d-01-full.bin` (webová instalace) a `nw3d-01-ota.bin` (aktualizace přes web) a obnoví instalační stránku. Značka s pomlčkou (`v2.1.0-beta.1`) se vydá jako testovací: instalační stránka ji nabídne, ale roboti ji sami nehlásí.
+Na GitHubu otevři **Actions → Firmware → Run workflow** a do pole vyplň verzi, např. `v2.0.1` (případně v gitu vytvoř a nahraj značku `v2.0.1`). GitHub Actions firmware sestaví, vytvoří vydání se soubory `nw3d-01-full.bin` (webová instalace) a `nw3d-01-ota.bin` (aktualizace přes web) a obnoví instalační stránku. Značka s pomlčkou (`v2.1.0-beta.1`) se vydá jako testovací: instalační stránka ji nabídne, ale roboti ji sami nehlásí.
 
 ## Řešení potíží
 | Co vidíš | Co udělat |

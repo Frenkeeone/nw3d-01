@@ -10,6 +10,11 @@ on:
   pull_request:
     paths: ["firmware/**"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Vydat jako verzi (napr. v2.0.1). Prazdne = jen sestavit."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -39,11 +44,14 @@ jobs:
         id: ver
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            V="${GITHUB_REF_NAME#v}"
+            V="${GITHUB_REF_NAME#v}"; T="$GITHUB_REF_NAME"
+          elif [[ -n "${{ inputs.release_tag }}" ]]; then
+            T="${{ inputs.release_tag }}"; V="${T#v}"
           else
             V="dev-${GITHUB_SHA::7}"
           fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=$T" >> "$GITHUB_OUTPUT"
 
       - name: Build
         working-directory: firmware
@@ -69,13 +77,14 @@ jobs:
           path: out/*.bin
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.ver.outputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
         run: |
           PRE=""
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then PRE="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" out/nw3d-01-full.bin out/nw3d-01-ota.bin \
-            --title "NW3D-01 $GITHUB_REF_NAME" $PRE --generate-notes \
+          if [[ "$TAG" == *-* ]]; then PRE="--prerelease"; fi
+          gh release create "$TAG" out/nw3d-01-full.bin out/nw3d-01-ota.bin --target "$GITHUB_SHA" \
+            --title "NW3D-01 $TAG" $PRE --generate-notes \
             --notes "Instalace / install: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/ · nw3d-01-full.bin = celý obraz (webová instalace, adresa 0x0) · nw3d-01-ota.bin = aktualizace přes web robota"
           gh workflow run pages.yml --ref main || echo "Pages workflow could not be started (is GitHub Pages enabled?)"
