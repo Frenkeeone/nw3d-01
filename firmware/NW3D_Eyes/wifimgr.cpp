@@ -181,6 +181,7 @@ static void impSend(uint8_t type, const uint8_t* data, uint8_t len) {
   uint8_t sum = 0;
   for (int i = 0; i < 9 + len; i++) sum += pkt[i];
   pkt[9 + len] = sum;
+  Serial.write('\n');          // paket musi zacinat na novem radku (mezi logy)
   Serial.write(pkt, 10 + len);
   Serial.write('\n');
   Serial.flush();
