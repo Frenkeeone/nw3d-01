@@ -32,6 +32,33 @@ bool draw(LGFX_Sprite& dst, int x, int y) {
   return true;
 }
 
+// Zapis stahovanych dat do bufferu v PSRAM (HTTPClient::writeToStream zvlada i "chunked" prenos)
+class BufStream : public Stream {
+ public:
+  uint8_t* buf = nullptr;
+  size_t len = 0, cap = 0;
+  bool overflow = false;
+  size_t write(uint8_t c) override { return write(&c, 1); }
+  size_t write(const uint8_t* d, size_t n) override {
+    if (len + n > cap) {
+      size_t nc = cap ? cap * 2 : 64 * 1024;
+      while (nc < len + n) nc *= 2;
+      if (nc > 1024 * 1024) { overflow = true; return 0; }
+      uint8_t* nb = (uint8_t*)heap_caps_realloc(buf, nc, MALLOC_CAP_SPIRAM);
+      if (!nb) { overflow = true; return 0; }
+      buf = nb;
+      cap = nc;
+    }
+    memcpy(buf + len, d, n);
+    len += n;
+    return n;
+  }
+  int available() override { return 0; }
+  int read() override { return -1; }
+  int peek() override { return -1; }
+  void flush() override {}
+};
+
 // Stazeni obrazku do PSRAM. Vraci delku (0 = chyba).
 static size_t download(const String& url, uint8_t*& buf) {
   buf = nullptr;
@@ -43,22 +70,12 @@ static size_t download(const String& url, uint8_t*& buf) {
   if (!http.begin(c, url)) return 0;
   int code = http.GET();
   if (code != 200) { http.end(); return 0; }
-  int len = http.getSize();
-  const size_t MAXB = 800 * 1024;
-  size_t cap = (len > 0 && (size_t)len < MAXB) ? (size_t)len : MAXB;
-  buf = (uint8_t*)heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
-  if (!buf) { http.end(); return 0; }
-  WiFiClient* st = http.getStreamPtr();
-  size_t got = 0;
-  uint32_t t0 = millis();
-  while (http.connected() && got < cap && (len < 0 || got < (size_t)len) && millis() - t0 < 20000) {
-    size_t a = st->available();
-    if (!a) { delay(5); continue; }
-    got += st->readBytes(buf + got, min(a, cap - got));
-  }
+  BufStream bs;
+  int r = http.writeToStream(&bs);
   http.end();
-  if (got < 16) { free(buf); buf = nullptr; return 0; }
-  return got;
+  if (r <= 0 || bs.overflow || bs.len < 16) { free(bs.buf); return 0; }
+  buf = bs.buf;
+  return bs.len;
 }
 
 static bool decode(const uint8_t* d, size_t n) {

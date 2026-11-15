@@ -78,4 +78,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" out/nw3d-01-full.bin out/nw3d-01-ota.bin \
             --title "NW3D-01 $GITHUB_REF_NAME" $PRE --generate-notes \
             --notes "Instalace / install: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/ · nw3d-01-full.bin = celý obraz (webová instalace, adresa 0x0) · nw3d-01-ota.bin = aktualizace přes web robota"
-          gh workflow run pages.yml --ref main
+          gh workflow run pages.yml --ref main || echo "Pages workflow could not be started (is GitHub Pages enabled?)"

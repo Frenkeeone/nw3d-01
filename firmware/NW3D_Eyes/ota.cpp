@@ -22,6 +22,8 @@ void requestInstall() { s_install = true; }
 
 // "v2.1.3" > "2.0"?
 bool newer(const char* a, const char* b) {
+  const char* a0 = a;
+  const char* b0 = b;
   while (*a && !isdigit((unsigned char)*a)) a++;
   while (*b && !isdigit((unsigned char)*b)) b++;
   for (int i = 0; i < 4; i++) {
@@ -31,7 +33,8 @@ bool newer(const char* a, const char* b) {
     if (*b == '.') b++;
     if (!*a && !*b) break;
   }
-  return false;
+  // stejna cisla: vydani bez pripony je novejsi nez testovaci (2.0.0 > 2.0.0-beta.1)
+  return strchr(b0, '-') && !strchr(a0, '-');
 }
 
 static void check() {

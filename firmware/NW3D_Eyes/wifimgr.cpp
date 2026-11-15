@@ -3,6 +3,7 @@
 #include "version.h"
 #include <WiFi.h>
 #include <DNSServer.h>
+#include "esp_mac.h"
 
 namespace wifimgr {
 
@@ -52,8 +53,8 @@ static void stopPortal() {
 
 void begin() {
   s_scanLock = xSemaphoreCreateMutex();
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
+  uint8_t mac[6] = {0};
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char buf[16];
   snprintf(buf, sizeof buf, "NW3D-%02X%02X", mac[4], mac[5]);
   s_ap = buf;
@@ -85,7 +86,9 @@ void loop() {
     if (s_state == State::Connected) { s_state = State::Connecting; s_since = now; }
     DevCfg c = cfg::get();
     if (!s_portal && (c.ssid.isEmpty() || now - s_since > 60000UL)) startPortal();
-    if (c.ssid.length() && now - s_lastKick > 20000UL) {
+    // kdyz je nekdo pripojeny k nastavovaci siti, neprepinat kanaly zkousenim domaci site
+    bool guests = s_portal && WiFi.softAPgetStationNum() > 0;
+    if (c.ssid.length() && !guests && now - s_lastKick > (s_portal ? 45000UL : 20000UL)) {
       s_lastKick = now;
       WiFi.disconnect();
       WiFi.begin(c.ssid.c_str(), c.pass.c_str());
