@@ -9,6 +9,8 @@
 | PubSubClient | PlatformIO dependency | MIT |
 | ArduinoJson | PlatformIO dependency | MIT |
 | ESP Web Tools (installer page) | loaded from unpkg.com | Apache License 2.0 |
+| three.js 0.160.0 (configurator) | `site/konfigurator/lib/three.module.min.js`, `STLLoader.js`, `OrbitControls.js` | MIT |
+| fflate 0.8.2 (configurator) | `site/konfigurator/lib/fflate.js` | MIT |
 
 Apache 2.0 text: https://www.apache.org/licenses/LICENSE-2.0
 

@@ -4,6 +4,11 @@ English: [README.md](README.md). Soubory: `stl/`, `3mf/` (vícebarevné díly), 
 
 Celková výška 165 mm (s nožičkami asi 168 mm), hlava 124 × 84 × 64 mm. Elektronika je jedna deska Waveshare DualEye (ESP32-S3 + 2 kulaté displeje 1,28"), uložená v hlavě. Desku **nerozdělovat**.
 
+## Varianty a konfigurátor
+**[Konfigurátor](https://frenkeeone.github.io/nw3d-01/konfigurator/)** kombinuje 3 tvary hlavy, 3 tvary těla, 5 typů pusy, 6 stylů prstenců očí (každé oko zvlášť), 4 antény a 6 znaků na hrudi v libovolných barvách a vyexportuje hotové soubory 3MF. Varianty vytváří `src/variants.py`, všechny díly pro konfigurátor znovu vygeneruje `python3 src/export_configurator.py` (potřebuje `pip install cadquery trimesh shapely scikit-image`).
+
+Tělo z konfigurátoru má jednotné lůžko pro štítek (50 × 32 mm, hloubka 1 mm), takže jakýkoli znak pasuje na jakékoli tělo. Původní tělo s lůžkem ve tvaru loga (`06_telo` + `06a_logo`) zůstává ve složce `stl/`.
+
 ## Než pustíš celou hlavu
 Vytiskni `00_test_oko.stl` (výřez čela s jedním okem a dvěma sloupky) a k tomu `02b_drzak_oka_pravy.stl`. Ověř si:
 - že rámeček displeje (Ø 36,5) i s výstupkem připojení (celkem 39 mm, vybrání na vnitřní straně oka) sedí v lůžku a oko je ve výřezu vystředěné,

@@ -7,6 +7,7 @@ NW3D-01 is a 3D-printed desk robot whose round display eyes show the progress of
 | | |
 |---|---|
 | **Install firmware** | **[frenkeeone.github.io/nw3d-01](https://frenkeeone.github.io/nw3d-01/)** – straight from Chrome/Edge, no software needed |
+| **Configurator** | **[frenkeeone.github.io/nw3d-01/konfigurator](https://frenkeeone.github.io/nw3d-01/konfigurator/)** – pick head, body, eyes, mouth, antenna, emblem and colours, download 3MF files |
 | **3D models** | [`cad/`](cad/) – STL, 3MF (multi-colour) and STEP |
 | **Firmware source** | [`firmware/`](firmware/) – Arduino / PlatformIO |
 
@@ -66,6 +67,7 @@ Unofficial project, not affiliated with Bambu Lab, Waveshare or Yahoo. The Bambu
 NW3D-01 je stolní robot z 3D tiskárny. Jeho kulaté displeje-oči ukazují průběh tisku na tiskárně **Bambu Lab**, hodiny, počasí a kurzy. Celý je postavený na jedné desce **Waveshare ESP32-S3-DualEye-LCD-1.28** a nic se nepájí.
 
 - **Instalace firmwaru:** **[frenkeeone.github.io/nw3d-01](https://frenkeeone.github.io/nw3d-01/)** – přímo v prohlížeči Chrome nebo Edge, nic se neinstaluje
+- **Konfigurátor:** **[frenkeeone.github.io/nw3d-01/konfigurator](https://frenkeeone.github.io/nw3d-01/konfigurator/)** – tvar hlavy a těla, oči, pusa, anténa, znak a barvy, stažení 3MF
 - **Modely:** [`cad/`](cad/) – STL, 3MF (vícebarevné) a STEP, návod v [`cad/README.cs.md`](cad/README.cs.md)
 - **Zdrojový kód:** [`firmware/`](firmware/), návod pro vlastní překlad v [`firmware/NAVOD.md`](firmware/NAVOD.md)
 

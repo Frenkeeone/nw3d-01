@@ -1,0 +1,3 @@
+Konfigurator NW3D-01: 3D modely v teto slozce jsou licencovane CC BY-NC-SA 4.0 (viz cad/LICENSE v repozitari).
+NW3D-01 configurator: the 3D models in this folder are licensed CC BY-NC-SA 4.0 (see cad/LICENSE in the repository).
+The NorthWeave3D logo is not covered by this licence.
