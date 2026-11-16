@@ -121,3 +121,7 @@ if __name__ == "__main__":
         mats[pid] = M
         print(f"{pid:32s} {nf:7d} trojuhelniku")
     json.dump(mats, open(idx_path, "w"), indent=0)
+    import variants as V
+    meta = {"HH": V.HH, "headTop": {st: round(V.head_top(st), 2) for st in V.HEAD_STYLES},
+            "badge": {"w": V.BADGE_W, "h": V.BADGE_H, "r": V.BADGE_R, "t": V.BADGE_T, "sym": V.SYM_D}}
+    json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=1)

@@ -57,13 +57,12 @@ BCH = 6.0
 PLATE_T = 3.0
 BOSS_XY = (38.0, 22.0)               # vlozky pro spodni viko
 
-# ---------------- LOGO NA HRUDI (samostatny dil, vlepuje se) ----------------
-LOGO_FILE = __import__("os").path.join(__import__("os").path.dirname(__file__), "logo.png")
-LOGO_W = 46.0                        # sirka loga
-LOGO_T = 1.6                         # tloustka vytisteneho loga
-LOGO_POCKET = 1.0                    # hloubka luzka v tele (logo vycniva 0.6 mm)
-LOGO_CLR = 0.15                      # vule kolem loga v luzku
-LOGO_ZC = 23.0                       # vyska stredu loga na tele
+# ---------------- STITEK NA HRUDI (samostatny dil, vlepuje se) ----------------
+BADGE_W, BADGE_H, BADGE_R = 50.0, 32.0, 6.0   # obdelnik se zaoblenymi rohy
+BADGE_T = 1.6                        # tloustka stitku
+BADGE_POCKET = 1.0                   # hloubka luzka v tele (stitek vycniva 0.6 mm)
+BADGE_CLR = 0.15                     # vule kolem stitku v luzku
+BADGE_ZC = 23.0                      # vyska stredu stitku na tele
 
 # ---------------- ESP32-S3-DevKitC-1 ----------------
 ESP_L, ESP_W = 63.0, 25.5            # priblizne, deska lezi obracene (piny nahoru)
@@ -126,48 +125,11 @@ def pcb_to_world(eye_x, px, pz):
 # =====================================================================
 #  HLAVA (tiskne se celem dolu)
 # =====================================================================
-_LOGO_CACHE = {}
-
-
-def logo_polygon(width, offset):
-    """Obrys loga z PNG (azurove tahy) jako shapely polygon v mm, vycentrovany."""
-    key = (width, offset)
-    if key in _LOGO_CACHE:
-        return _LOGO_CACHE[key]
-    import numpy as np
-    from skimage import io, measure
-    from shapely.geometry import Polygon
-    im = io.imread(LOGO_FILE)[..., :3].astype(float)
-    mask = (im[..., 0] < 140) & (im[..., 1] > 150) & (im[..., 2] > 150)
-    mask = np.pad(mask, 2)
-    cs = measure.find_contours(mask.astype(float), 0.5)
-    polys = sorted([Polygon(c[:, ::-1]).buffer(0) for c in cs if len(c) > 20], key=lambda p: -p.area)
-    shape = polys[0]
-    for hole in polys[1:]:
-        shape = shape.difference(hole)
-    minx, miny, maxx, maxy = shape.bounds
-    k = width / (maxx - minx)
-    from shapely import affinity
-    shape = affinity.translate(shape, -(minx + maxx) / 2, -(miny + maxy) / 2)
-    shape = affinity.scale(shape, k, -k, origin=(0, 0))      # obraz ma osu y dolu
-    shape = shape.buffer(offset, join_style=1).simplify(0.03)
-    _LOGO_CACHE[key] = shape
-    return shape
-
-
-def logo_solid(width, offset, y0, y1):
-    """Logo jako teleso v rovine XZ (x = sirka, z = vyska), od y0 do y1."""
-    shape = logo_polygon(width, offset)
-    geoms = getattr(shape, "geoms", [shape])
-    solid = None
-    for g in geoms:
-        ext = list(g.exterior.coords)[:-1]
-        sld = cq.Workplane("XZ").polyline(ext).close().extrude(-(y1 - y0))
-        for interior in g.interiors:
-            pts = list(interior.coords)[:-1]
-            sld = sld.cut(cq.Workplane("XZ").polyline(pts).close().extrude(-(y1 - y0) - 2).translate((0, -1, 0)))
-        solid = sld if solid is None else solid.union(sld)
-    return solid.translate((0, y0, 0))
+def badge_solid(offset, y0, y1):
+    """Stitek (obdelnik se zaoblenymi rohy) jako teleso v rovine XZ, od y0 do y1."""
+    w, h, r = BADGE_W + 2 * offset, BADGE_H + 2 * offset, BADGE_R + offset
+    return (cq.Workplane("XZ").rect(w, h).extrude(-(y1 - y0)).edges("|Y").fillet(r)
+            .translate((0, y0, 0)))
 
 
 def head_envelope():
@@ -416,24 +378,24 @@ def body():
             x0, x1 = sx * (BW0 / 2 - 14), sx * (BW0 / 2 + 2)
             b = b.cut(box(min(x0, x1), max(x0, x1), -14, 14, z - 1.5, z + 1.5))
 
-    # luzko pro logo na predni (sikme) strane
+    # luzko pro stitek na predni (sikme) strane
     slope = math.atan(((BD0 - BD1) / 2) / BH)
-    zc = LOGO_ZC
+    zc = BADGE_ZC
     yface = -(BD0 / 2 - (BD0 - BD1) / 2 * zc / BH)
-    b = b.cut(logo_solid(LOGO_W, LOGO_CLR, -1.0, LOGO_POCKET).rotate((0, 0, 0), (1, 0, 0), -math.degrees(slope))
+    b = b.cut(badge_solid(BADGE_CLR, -1.0, BADGE_POCKET).rotate((0, 0, 0), (1, 0, 0), -math.degrees(slope))
               .translate((0, yface, zc)))
     return b, (yface, zc, slope)
 
 
 def body_text(yface, zc, slope):
-    """Logo vlozene do luzka (v sestave) - vycniva LOGO_T - LOGO_POCKET nad povrch."""
-    return (logo_solid(LOGO_W, 0.0, -(LOGO_T - LOGO_POCKET), LOGO_POCKET)
+    """Stitek vlozeny do luzka (v sestave) - vycniva BADGE_T - BADGE_POCKET nad povrch."""
+    return (badge_solid(0.0, -(BADGE_T - BADGE_POCKET), BADGE_POCKET)
             .rotate((0, 0, 0), (1, 0, 0), -math.degrees(slope)).translate((0, yface, zc)))
 
 
-def logo_print():
-    """Logo k samostatnemu tisku (naplocho)."""
-    return logo_solid(LOGO_W, 0.0, 0, LOGO_T).rotate((0, 0, 0), (1, 0, 0), 90)
+def badge_print():
+    """Prazdny stitek k samostatnemu tisku (naplocho). Znaky a vlastni logo: konfigurator."""
+    return badge_solid(0.0, 0, BADGE_T).rotate((0, 0, 0), (1, 0, 0), 90)
 
 
 def bottom_plate():

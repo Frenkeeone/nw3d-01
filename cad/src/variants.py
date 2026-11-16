@@ -19,11 +19,6 @@ Y_HEAD = -HD / 2
 # --------------------------------------------------------------------------------------
 #  Obrysy (tvary hlavy a tela)
 # --------------------------------------------------------------------------------------
-HEAD_STYLES = {
-    "hranata": ("chamfer", 7.0),
-    "obla":    ("round", 12.0, 12.0),
-    "retro":   ("round", 17.0, 6.0),     # nahore vetsi zaobleni, dole mensi
-}
 BODY_STYLES = {
     "hranate": ("chamfer", BCH, BCH),
     "oble":    ("round", 8.0, 6.0),      # (zaobleni dole, nahore)
@@ -43,12 +38,57 @@ def rounded(w, d, rt, rb, n=10):
     return pts
 
 
-def head_outline(style, inset=0.0):
-    kind = HEAD_STYLES[style]
-    w, d = HW - 2 * inset, HH - 2 * inset
-    if kind[0] == "chamfer":
-        return R.octagon(w, d, kind[1] - inset * 0.6)
-    return rounded(w, d, max(1.0, kind[1] - inset), max(1.0, kind[2] - inset))
+# Profil hlavy pri pohledu zepredu (x, z), z = 0 je spodek hlavy. Hlava je tento profil
+# vytazeny do hloubky HD -> tiskne se celem dolu bez podper.
+# Kazdy tvar musi obsahnout oci (x +-52, z 25..73), pusu (x +-46, z 10..27) a desku uvnitr.
+HEAD_STYLES = ["hranata", "kulata", "kopule", "vejce"]
+
+
+def head_profile(style):
+    if style == "hranata":
+        return Polygon([(x, z + HH / 2) for x, z in R.octagon(HW, HH, 7.0)])
+    if style == "kulata":            # kruh s rovnym spodkem
+        c = Point(0, 49).buffer(60, resolution=64)
+        return c.intersection(sbox(-100, 0, 100, 200))
+    if style == "kopule":            # hranaty spodek, nahore klenba
+        dome = affinity.scale(Point(0, 0).buffer(1, resolution=64), 62, 42).buffer(0)
+        dome = affinity.translate(dome, 0, 55)
+        base = sbox(-62, 0, 62, 55).buffer(-6).buffer(6)
+        return unary_union([base, dome]).intersection(sbox(-100, 0, 100, 200))
+    if style == "vejce":             # vejce: dole siroke, nahore uzsi a vyssi
+        pts = []
+        for i in range(160):
+            t = 2 * math.pi * i / 160
+            pts.append((66 * math.cos(t) * (1 - 0.18 * math.sin(t)), 50 + 62 * math.sin(t)))
+        return Polygon(pts).buffer(0).intersection(sbox(-100, 0, 100, 200))
+    raise ValueError(style)
+
+
+def head_top(style):
+    """Vyska temene (z) uprostred - tam je otvor pro antenu."""
+    return head_profile(style).bounds[3]
+
+
+def head_posts(style):
+    """Polohy 4 zavitovych vlozek pro zadni viko (x, z)."""
+    if style == "hranata":
+        bx, bz0, bz1 = HW / 2 - WALL - 8.0, WALL + 7.0, HH - WALL - 7.0
+        return [(sx * bx, z) for sx in (-1, 1) for z in (bz0, bz1)]
+    inner = head_profile(style).buffer(-WALL - 4.8)
+    minx, minz, maxx, maxz = inner.bounds
+    zc = (minz + maxz) / 2
+    out = []
+    for ang in (35, 145, 215, 325):
+        a = math.radians(ang)
+        ray = LineString([(0, zc), (200 * math.cos(a), zc + 200 * math.sin(a))])
+        hit = ray.intersection(inner.exterior)
+        p = hit if hit.geom_type == "Point" else min(hit.geoms, key=lambda g: g.distance(Point(0, zc)))
+        out.append((p.x, max(p.y, WALL + 6.5)))
+    return out
+
+
+def ring_pts(poly):
+    return list(poly.exterior.coords)[:-1]
 
 
 def body_outline(style, w, d, top, inset=0.0):
@@ -98,7 +138,7 @@ def solid_xy(shape, z0, z1):
 #  PUSA - vlozky v cele hlavy (zapustene 0.8 mm, tisknou se spolu s hlavou)
 # --------------------------------------------------------------------------------------
 MOUTH_D = 0.8
-MOUTHS = ["pruh", "mrizka", "usmev", "led", "zadna"]
+MOUTHS = ["pruh", "mrizka", "usmev", "zadna"]
 
 
 def mouth_shapes(kind):
@@ -125,11 +165,6 @@ def mouth_shapes(kind):
         smile = arc.buffer(2.6, cap_style=1)
         dimples = unary_union([Point(sx * 23.2, 20.5).buffer(1.6, resolution=24) for sx in (-1, 1)])
         return [("mouthB", smile), ("mouthA", dimples)]
-    if kind == "led":
-        xs = [-36 + 9 * i for i in range(9)]
-        a = [Point(x, 18).buffer(3.2, resolution=24) for i, x in enumerate(xs) if i % 2 == 0]
-        b = [Point(x, 18).buffer(3.2, resolution=24) for i, x in enumerate(xs) if i % 2 == 1]
-        return [("mouthA", unary_union(a)), ("mouthB", unary_union(b))]
     return []
 
 
@@ -142,20 +177,21 @@ def mouth_parts(kind):
 #  HLAVA
 # --------------------------------------------------------------------------------------
 def head(style, mouth):
-    pts = [(x, z + HH / 2) for x, z in head_outline(style)]
-    outer = cq.Workplane("XZ").polyline(pts).close().extrude(-HD)
-    ipts = [(x, z + HH / 2) for x, z in head_outline(style, WALL)]
-    inner = cq.Workplane("XZ").polyline(ipts).close().extrude(-(HD - FRONT + 1)).translate((0, FRONT, 0))
+    prof = head_profile(style)
+    outer = cq.Workplane("XZ").polyline(ring_pts(prof)).close().extrude(-HD)
+    inner = (cq.Workplane("XZ").polyline(ring_pts(prof.buffer(-WALL, join_style=2))).close()
+             .extrude(-(HD - FRONT + 1)).translate((0, FRONT, 0)))
     h = outer.cut(inner)
+    top = head_top(style)
+    zmid = (prof.bounds[1] + top) / 2
 
-    bx, bz0, bz1 = HW / 2 - WALL - 8.0, WALL + 7.0, HH - WALL - 7.0
-    for sx in (-1, 1):
-        for zc in (bz0, bz1):
-            sz = -1 if zc < HH / 2 else 1
-            h = h.union(corner_fill(outer, sx * bx - sx * 5, zc - sz * 5, sx, sz, "y", HD - 14, HD, HD - 14, steps=-10))
-    for sx in (-1, 1):
-        for zc in (bz0, bz1):
-            h = h.cut(cyl_y(INS_M3, HD - INS_M3_D, HD + 1, sx * bx, zc))
+    posts = head_posts(style)
+    for px, pz in posts:
+        sx = 1 if px > 0 else -1
+        sz = 1 if pz > zmid else -1
+        h = h.union(corner_fill(outer, px - sx * 5, pz - sz * 5, sx, sz, "y", HD - 14, HD, HD - 14, steps=-10))
+    for px, pz in posts:
+        h = h.cut(cyl_y(INS_M3, HD - INS_M3_D, HD + 1, px, pz))
 
     post_top = DISP_FACE + BRASS_TOP + PAD_H - CLAMP
     h = h.cut(box(-7.5, 7.5, DISP_FACE - 0.6, FRONT + 1, WALL - 0.01, EYE_Z - 2))
@@ -181,7 +217,18 @@ def head(style, mouth):
         recess = unary_union([s for _, s in shapes])
         h = h.cut(solid_xz(recess, -0.01, MOUTH_D))
 
-    # bocni zebra
+    # bocni zebra (jen hranata hlava - ostatni tvary maji oble boky)
+    if style == "hranata":
+        h = add_fins(h)
+    yc = HD / 2
+    h = h.cut(cyl_z(NECK_ID, -1, WALL + 1, 0, yc))
+    for sy in (-1, 1):
+        h = h.cut(cyl_z(CLR_M3, -1, WALL + 1, 0, yc + sy * NECK_HOLE_R))
+    h = h.cut(cyl_z(5.3, top - WALL - 3, top + 1, 0, yc))
+    return h
+
+
+def add_fins(h):
     FIN_OUT, FIN_Y0, FIN_Y1 = 7.0, 14.0, HD - 12.0
     run = FIN_OUT / 0.8
     w0 = HW / 2 - 0.5
@@ -200,40 +247,34 @@ def head(style, mouth):
         h = h.union(cq.Workplane("XY").polyline(front).close().extrude(30.5).translate((0, 0, 36)))
         h = h.union(cq.Workplane("XY").polyline(fin_profile(FIN_Y1 - 3, FIN_Y1, sx)).close()
                     .extrude(30.5).translate((0, 0, 36)))
-
-    yc = HD / 2
-    h = h.cut(cyl_z(NECK_ID, -1, WALL + 1, 0, yc))
-    for sy in (-1, 1):
-        h = h.cut(cyl_z(CLR_M3, -1, WALL + 1, 0, yc + sy * NECK_HOLE_R))
-    h = h.cut(cyl_z(5.3, HH - WALL - 1, HH + 1, 0, yc))
     return h
 
 
 def head_back(style):
-    pts = head_outline(style)
+    prof = head_profile(style)
     t = 3.0
-    c = cq.Workplane("XY").polyline(pts).close().extrude(t)
-    c = c.faces(">Z").edges().chamfer(1.0)
-    bx, bz0, bz1 = HW / 2 - WALL - 8.0, WALL + 7.0, HH - WALL - 7.0
-    for sx in (-1, 1):
-        for zc in (bz0, bz1):
-            y = zc - HH / 2
-            c = c.cut(cyl_z(CLR_M3, -1, t + 1, sx * bx, y))
-            c = c.cut(cyl_z(HEAD_M3, t - 1.6, t + 1, sx * bx, y))
+    c = cq.Workplane("XY").polyline(ring_pts(prof)).close().extrude(t)
+    try:
+        c = c.faces(">Z").edges().chamfer(1.0)
+    except Exception:
+        pass
+    for px, pz in head_posts(style):
+        c = c.cut(cyl_z(CLR_M3, -1, t + 1, px, pz))
+        c = c.cut(cyl_z(HEAD_M3, t - 1.6, t + 1, px, pz))
+    zm = 42.0                                   # vetraci drazky a stitek kolem stredu desky
     for i in range(6):
-        y = -18 + i * 7
+        y = zm - 18 + i * 7
         c = c.cut(box(-30, 30, y - 1.5, y + 1.5, -1, t + 1))
-    c = c.cut(box(-34, 34, 24, 34, t - 0.6, t + 1).cut(box(-32, 32, 26, 32, t - 1, t + 2)))
-    # do sestavy (stejne jako robot.build)
+    c = c.cut(box(-34, 34, zm + 24, zm + 34, t - 0.6, t + 1).cut(box(-32, 32, zm + 26, zm + 32, t - 1, t + 2)))
     return (c.rotate((0, 0, 0), (1, 0, 0), -90).rotate((0, 0, 0), (0, 1, 0), 180)
-            .translate((0, Y_HEAD + HD, Z_HEAD + HH / 2)))
+            .translate((0, Y_HEAD + HD, Z_HEAD)))
 
 
 # --------------------------------------------------------------------------------------
 #  TELO + spodni viko, jednotne lozko pro stitek se znakem
 # --------------------------------------------------------------------------------------
-BADGE_W, BADGE_H, BADGE_R = 50.0, 32.0, 6.0
-BADGE_T, BADGE_POCKET, BADGE_CLR, BADGE_ZC = 1.6, 1.0, 0.15, 23.0
+BADGE_W, BADGE_H, BADGE_R = R.BADGE_W, R.BADGE_H, R.BADGE_R
+BADGE_T, BADGE_POCKET, BADGE_CLR, BADGE_ZC = R.BADGE_T, R.BADGE_POCKET, R.BADGE_CLR, R.BADGE_ZC
 SLOPE = math.atan(((BD0 - BD1) / 2) / BH)
 Y_FACE = -(BD0 / 2 - (BD0 - BD1) / 2 * BADGE_ZC / BH)
 
@@ -299,14 +340,12 @@ def bottom_plate(style):
 # --------------------------------------------------------------------------------------
 #  ZNAK NA HRUDI - stitek (zakladni barva) + znak (vlozka v hornich 0.6 mm)
 # --------------------------------------------------------------------------------------
-EMBLEMS = ["logo", "kolo", "blesk", "srdce", "hvezda", "prazdny"]
+EMBLEMS = ["kolo", "blesk", "srdce", "hvezda", "prazdny"]
 SYM_D = 0.6
 
 
 def emblem_shape(kind):
     """Znak v rovine XZ, stred v (0, 0), vejde se do ~44 x 26 mm."""
-    if kind == "logo":
-        return R.logo_polygon(40.0, 0.0)
     if kind == "kolo":
         teeth = [sbox(-2.4, 0, 2.4, 13.0) for _ in range(10)]
         teeth = unary_union([affinity.rotate(t, i * 36, origin=(0, 0)) for i, t in enumerate(teeth)])
@@ -451,4 +490,9 @@ def antenna(kind):
         flip = False
     else:
         raise ValueError(kind)
+    if not flip:
+        # "sukne": tenky disk pod cepem, aby antena pri tisku nastojato drzela na podlozce.
+        # Po tisku se odstrihne (konec cepu je schovany v hlave).
+        a = a.union(cyl_z(26.0, 0, 0.6, 0, 0)).union(
+            cq.Workplane("XY").circle(4.0).workplane(offset=1.2).circle(2.5).loft().translate((0, 0, 0.6)))
     return a.translate((0, 0, Z_HEAD + HH - 7)), flip

@@ -7,8 +7,8 @@ Pracovní verze popisu. Fotky a fotky do montážního návodu doplní Frantisek
 - [ ] Sekce **AI-Generated Content**: model i firmware vznikly s pomocí AI (Claude) → zvážit označení podle [AI Policy](https://wiki.bambulab.com/en/makerworld/ai-policy).
 - [ ] Licence na MakerWorld: odpovídající CC BY-NC-SA 4.0 (v repozitáři `cad/LICENSE`).
 - [ ] Ověřit, zda pravidla dovolují odkaz na GitHub (instalace firmwaru). Kdyby ne: odkaz jen v profilu / v komentáři.
-- [ ] Logo na hrudi: nahrát variantu s neutrálním znakem, nebo dát logo jako volitelný díl.
-- [ ] Tiskové profily (3MF) pro Bambu Studio: hlava s pruhem, tělo, drobné díly (antény, prstence, držáky, logo).
+- [ ] Znak na hrudi: štítky se znaky a vlastní logo jsou v konfigurátoru (odkázat na něj).
+- [ ] Tiskové profily (3MF) pro Bambu Studio: hlava s pruhem, tělo, drobné díly (antény, prstence, držáky, štítek).
 - [ ] Odkaz na instalaci: https://frenkeeone.github.io/nw3d-01/
 
 ## Název
@@ -45,7 +45,7 @@ Works with Bambu Lab printers through the Bambu cloud (printer stays in normal m
 - All parts print **without supports**.
 - PLA is fine (prototype: Bambu PLA Basic Light Gray), about 250 g in the main colour.
 - The head comes as a multi-colour 3MF with the yellow/black warning stripe – just assign filaments.
-- Chest logo is a separate part you glue in, so no multi-colour print is needed for the body.
+- The chest badge is a separate part you glue in – pick an emblem or upload your own logo in the configurator.
 - Extras: a blind eye cap and a cracked "black eye" ring, if one of your displays ever breaks 😉
 
 **Hardware (BOM)**
@@ -57,7 +57,7 @@ Works with Bambu Lab printers through the Bambu cloud (printer stays in normal m
 | M2 × 6 screw (into the board's brass standoffs) | 4 |
 | Silicone feet Ø 11 mm | 4 |
 | Foam double-sided tape (speaker) | a piece |
-| Super glue (eye rings, logo) | |
+| Super glue (eye rings, chest badge) | |
 | USB-C data cable + 5 V USB charger | 1 |
 
 **Before printing the whole head**, print the small test piece `00_test_oko` and one eye bracket to check that the display fits.
@@ -94,7 +94,7 @@ Funguje s tiskárnami Bambu Lab přes Bambu cloud (tiskárna zůstává v normá
 - Všechny díly se tisknou **bez podpěr**.
 - Stačí PLA (prototyp: Bambu PLA Basic Light Gray), asi 250 g hlavní barvy.
 - Hlava je jako vícebarevný 3MF se žluto-černým pruhem – jen přiřadíš filamenty.
-- Logo na hrudi je samostatný díl, který se vlepí, takže tělo se tiskne jednobarevně.
+- Štítek na hrudi je samostatný díl, který se vlepí – znak nebo vlastní logo vybereš v konfigurátoru.
 - Navíc: krytka slepého oka a rozbité okruží „monokl“ pro případ, že se displej rozbije 😉
 
 **Materiál**
@@ -106,7 +106,7 @@ Funguje s tiskárnami Bambu Lab přes Bambu cloud (tiskárna zůstává v normá
 | šroub M2 × 6 (do mosazných sloupků desky) | 4 |
 | silikonové nožičky Ø 11 mm | 4 |
 | oboustranná pěnová páska (reproduktor) | kousek |
-| vteřinové lepidlo (prstence očí, logo) | |
+| vteřinové lepidlo (prstence očí, štítek) | |
 | datový kabel USB-C + USB nabíječka 5 V | 1 |
 
 **Než vytiskneš celou hlavu**, vytiskni malý zkušební díl `00_test_oko` a jeden držák oka a zkontroluj, že displej sedí.
@@ -129,4 +129,4 @@ Neoficiální projekt, není spojený s Bambu Lab ani Waveshare.
 7. Hlava na krk (2× M3 zespodu hlavy)
 8. Reproduktor na zadní víko, víko 4× M3
 9. Spodní víko, nožičky
-10. Prstence očí, logo, anténa – hotovo
+10. Prstence očí, štítek, anténa – hotovo

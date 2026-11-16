@@ -7,7 +7,7 @@ Celková výška 165 mm (s nožičkami asi 168 mm), hlava 124 × 84 × 64 mm. El
 ## Varianty a konfigurátor
 **[Konfigurátor](https://frenkeeone.github.io/nw3d-01/konfigurator/)** kombinuje 3 tvary hlavy, 3 tvary těla, 5 typů pusy, 6 stylů prstenců očí (každé oko zvlášť), 4 antény a 6 znaků na hrudi v libovolných barvách a vyexportuje hotové soubory 3MF. Varianty vytváří `src/variants.py`, všechny díly pro konfigurátor znovu vygeneruje `python3 src/export_configurator.py` (potřebuje `pip install cadquery trimesh shapely scikit-image`).
 
-Tělo z konfigurátoru má jednotné lůžko pro štítek (50 × 32 mm, hloubka 1 mm), takže jakýkoli znak pasuje na jakékoli tělo. Původní tělo s lůžkem ve tvaru loga (`06_telo` + `06a_logo`) zůstává ve složce `stl/`.
+Tělo z konfigurátoru má jednotné lůžko pro štítek (50 × 32 mm, hloubka 1 mm), takže jakýkoli znak pasuje na jakékoli tělo. Stejné lůžko má i základní tělo `06_telo`, `06a_stitek` je prázdný štítek. Znaky a vlastní logo (SVG) jsou v konfigurátoru.
 
 ## Než pustíš celou hlavu
 Vytiskni `00_test_oko.stl` (výřez čela s jedním okem a dvěma sloupky) a k tomu `02b_drzak_oka_pravy.stl`. Ověř si:
@@ -31,7 +31,7 @@ STL soubory jsou už natočené do tiskové polohy.
 | 04_antena | 1 | hlavicí dolů (STL je už otočené), bez podpěr; nasunout do otvoru v temeni |
 | 05_krk | 1 | přírubou dolů |
 | 06_telo | 1 | vzhůru nohama, bez podpěr |
-| 06a_logo | 1 | samostatně, jinou barvou (azurová), lícem dolů na podložku; vlepit do lůžka na hrudi (lůžko 1 mm, logo vyčnívá 0,6 mm, vůle 0,15 mm) |
+| 06a_stitek | 1 | prázdný štítek na hruď, vlepit do lůžka (hloubka 1 mm, štítek vyčnívá 0,6 mm, vůle 0,15 mm). Štítek se znakem nebo vlastním logem: konfigurátor |
 | 07_spodni_viko | 1 | spodní plochou dolů |
 
 Doporučení: PLA (na prototypu Bambu PLA Basic Light Gray), PETG nebo ASA; vrstva 0,2 mm, 4 perimetry, výplň 15–20 % gyroid. Všechny díly se tisknou bez podpěr. Hlavní barva zabere asi 250 g filamentu.
@@ -42,7 +42,7 @@ Doporučení: PLA (na prototypu Bambu PLA Basic Light Gray), PETG nebo ASA; vrst
 - 4× šroub **M2 × 6** s imbusem, jen do mosazných závitů desky (vložky M2 nejsou potřeba)
 - 4× silikonová nožička Ø 11 mm
 - kousek oboustranné pěnové pásky (reproduktor)
-- vteřinové lepidlo (prstence očí, logo)
+- vteřinové lepidlo (prstence očí, štítek)
 - USB-C kabel, ideálně tenký a ohebný, případně s úhlovým konektorem
 
 ## Elektronika a kabeláž
@@ -58,4 +58,4 @@ Doporučení: PLA (na prototypu Bambu PLA Basic Light Gray), PETG nebo ASA; vrst
 4. Krk přišroubuj na tělo (2× M3), kabel protáhni krkem.
 5. Hlavu nasaď na krk a přišroubuj 2× M3 přes dno hlavy (zezadu, před nasazením víka).
 6. Reproduktor na zadní víko, víko 4× M3. Spodní víko 4× M3.
-7. Prstence očí, logo, anténa, nožičky.
+7. Prstence očí, štítek, anténa, nožičky.

@@ -10,7 +10,7 @@ def pr(k, v):
     if k == "antena":   # tiskne se hlavici dolu
         r = v.rotate((0,0,0),(1,0,0),180); return r.translate((0,0,-r.val().BoundingBox().zmin))
     if k == "telo_text":
-        return R.logo_print()
+        return R.badge_print()
     if k == "telo":
         return v.rotate((0,0,0),(1,0,0),180).translate((0,0,R.BH))
     if k=="spodni_viko":
@@ -18,7 +18,7 @@ def pr(k, v):
     return v
 names = {"hlava":"01_hlava","hlava_pruh_zluty":"01a_hlava_pruh_zluty","hlava_pruh_cerny":"01b_hlava_pruh_cerny",
  "prstenec_oka":"02_prstenec_oka_2ks","drzak_oka_L":"02a_drzak_oka_levy","drzak_oka_P":"02b_drzak_oka_pravy","zadni_viko":"03_zadni_viko","antena":"04_antena","krk":"05_krk",
- "telo":"06_telo","telo_text":"06a_logo","spodni_viko":"07_spodni_viko"}
+ "telo":"06_telo","telo_text":"06a_stitek","spodni_viko":"07_spodni_viko"}
 for k,v in parts.items():
     p = pr(k,v)
     bb=p.val().BoundingBox(); print(k, "zmin", round(bb.zmin,2), "size", round(bb.xlen,1), round(bb.ylen,1), round(bb.zlen,1))

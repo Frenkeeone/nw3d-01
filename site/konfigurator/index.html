@@ -32,6 +32,9 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);m
 .small{font-size:13px}.dim{color:var(--dim)}
 .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--dim);margin:2px 0 8px}
 .hide{display:none!important}
+.note{font-size:13px;color:var(--amb);background:#2a2412;border:1px solid #4a3d16;border-radius:10px;padding:8px 10px;margin-top:8px}
+.note ul{color:var(--txt)}#customBox{color:var(--txt);background:#141d23;border-color:var(--line)}
+#customBox input{margin:6px 0;max-width:100%}
 a{color:var(--acc)}
 ul{margin:6px 0;padding-left:18px}
 @media (max-width:820px){#app{flex-direction:column;height:auto}#view{height:58vh;flex:none}#panel{width:auto;border-left:0;border-top:1px solid var(--line)}}
@@ -53,8 +56,22 @@ ul{margin:6px 0;padding-left:18px}
   <label class="check"><input type="checkbox" id="same" checked> <span data-t="same">stejné pro obě oči</span></label>
   <div class="eyerow"><span class="small dim" data-t="left">levé</span><div class="opts" id="o_eyeL"></div></div>
   <div class="eyerow" id="rowR"><span class="small dim" data-t="right">pravé</span><div class="opts" id="o_eyeR"></div></div>
+  <div class="note hide" id="blindNote" data-t="blind_note">Slepé oko zakryje displej – na tom oku nebude nic vidět. Hodí se, když je displej rozbitý.</div>
   <h2 data-t="h_ant">Anténa</h2><div class="opts" id="o_ant"></div>
+  <div class="note hide" id="skirtNote" data-t="skirt_note">Tahle anténa se tiskne nastojato s tenkou „sukní“ pod čepem, aby držela na podložce. Po tisku ji odstřihni.</div>
   <h2 data-t="h_badge">Znak na hrudi</h2><div class="opts" id="o_badge"></div>
+  <div class="note hide" id="customBox">
+   <div data-t="custom_rules">Nahraj vlastní logo jako soubor SVG:</div>
+   <ul class="small">
+    <li data-t="r1">jedna barva, vyplněné tvary (ne čáry; text převeď na křivky),</li>
+    <li data-t="r2">tvary se nesmí překrývat,</li>
+    <li data-t="r3">zmenší se na plochu 42 × 24 mm – nejtenší část aspoň 0,8 mm, mezery aspoň 0,5 mm,</li>
+    <li data-t="r4">obrázek PNG nejdřív převeď na SVG (např. Inkscape → Trasovat bitmapu).</li>
+   </ul>
+   <input type="file" id="logoFile" accept=".svg,image/svg+xml">
+   <div class="small" id="logoMsg"></div>
+   <div class="small dim" data-t="r5">Logo zůstává jen ve tvém prohlížeči a do odkazu na konfiguraci se neukládá.</div>
+  </div>
 
   <h2 data-t="h_colors">Barvy</h2>
   <div class="colors" id="colors"></div>
@@ -70,7 +87,7 @@ ul{margin:6px 0;padding-left:18px}
    <li><a href="../" data-t="l_fw">Instalace firmwaru</a></li>
    <li><a href="https://github.com/Frenkeeone/nw3d-01" data-t="l_gh">Zdrojové soubory, STEP a montáž (GitHub)</a></li>
   </ul>
-  <div class="small dim" data-t="lic">Modely: CC BY-NC-SA 4.0 (nekomerčně). Logo NorthWeave3D není součástí licence.</div>
+  <div class="small dim" data-t="lic">Modely: CC BY-NC-SA 4.0 (nekomerčně).</div>
  </div>
 </div>
 <script type="module" src="app.js"></script>

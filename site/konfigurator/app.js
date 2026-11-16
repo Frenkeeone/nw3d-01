@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from './lib/OrbitControls.js';
 import { STLLoader } from './lib/STLLoader.js';
+import { SVGLoader } from './lib/SVGLoader.js';
 import { zipSync, strToU8 } from './lib/fflate.js';
 
 const $ = id => document.getElementById(id);
@@ -16,19 +17,24 @@ const T = {
     h_ant: 'Antenna', h_badge: 'Chest emblem', h_colors: 'Colours', col_note: 'Shades roughly match Bambu PLA Basic filaments.',
     download: 'Download for printing (ZIP)', dl_note: 'The ZIP contains 4 3MF files (head, body and covers, eyes with brackets, antenna and emblem) with colours assigned, plus a guide. All parts print without supports.',
     share: 'Copy a link to this configuration', h_more: 'More', l_fw: 'Firmware installer', l_gh: 'Source files, STEP and assembly (GitHub)',
-    lic: 'Models: CC BY-NC-SA 4.0 (non-commercial). The NorthWeave3D logo is not covered by the licence.',
+    lic: 'Models: CC BY-NC-SA 4.0 (non-commercial).',
+    blind_note: 'The blind eye covers the display – nothing will be visible on that eye. Handy when a display is broken.',
+    skirt_note: 'This antenna prints standing up with a thin "skirt" under the peg so it stays on the bed. Cut it off after printing.',
+    custom_rules: 'Upload your own logo as an SVG file:', r1: 'one colour, filled shapes (no strokes; convert text to paths),',
+    r2: 'shapes must not overlap,', r3: 'it is scaled to fit 42 × 24 mm – thinnest part at least 0.8 mm, gaps at least 0.5 mm,',
+    r4: 'convert a PNG to SVG first (e.g. Inkscape → Trace Bitmap).', r5: 'The logo stays in your browser and is not stored in the configuration link.',
   }
 };
 const OPT = {
-  head: [['hranata', 'Hranatá', 'Angular'], ['obla', 'Oblá', 'Rounded'], ['retro', 'Retro', 'Retro']],
+  head: [['hranata', 'Hranatá', 'Boxy'], ['kulata', 'Kulatá', 'Round'], ['kopule', 'Kopule', 'Dome'], ['vejce', 'Vejce', 'Egg']],
   body: [['hranate', 'Hranaté', 'Angular'], ['oble', 'Oblé', 'Rounded'], ['kapsle', 'Kapsle', 'Capsule']],
   mouth: [['pruh', 'Výstražný pruh', 'Warning stripe'], ['mrizka', 'Mřížka', 'Grille'], ['usmev', 'Úsměv', 'Smile'],
-          ['led', 'LED tečky', 'LED dots'], ['zadna', 'Bez pusy', 'No mouth']],
+          ['zadna', 'Bez pusy', 'No mouth']],
   eye: [['klasik', 'Klasik', 'Classic'], ['nyty', 'Nýty', 'Rivets'], ['sestihran', 'Šestihran', 'Hexagon'],
         ['objektiv', 'Objektiv', 'Lens'], ['monokl', 'Monokl', 'Black eye'], ['slepe', 'Slepé oko', 'Blind eye']],
   ant: [['klasik', 'Klasik', 'Classic'], ['kulicka', 'Kulička', 'Ball'], ['dvojita', 'Dvojitá', 'Double'], ['radar', 'Radar', 'Radar']],
-  badge: [['logo', 'Logo NW3D', 'NW3D logo'], ['kolo', 'Ozubené kolo', 'Gear'], ['blesk', 'Blesk', 'Bolt'],
-          ['srdce', 'Srdce', 'Heart'], ['hvezda', 'Hvězda', 'Star'], ['prazdny', 'Prázdný', 'Blank']],
+  badge: [['kolo', 'Ozubené kolo', 'Gear'], ['blesk', 'Blesk', 'Bolt'], ['srdce', 'Srdce', 'Heart'],
+          ['hvezda', 'Hvězda', 'Star'], ['prazdny', 'Prázdný', 'Blank'], ['vlastni', 'Vlastní logo', 'Own logo']],
 };
 // barvy: priblizne odstiny Bambu PLA Basic
 const PALETTE = [
@@ -50,11 +56,14 @@ const ROLES = [  // id, cs, en, vychozi barva, kdy je videt
   ['dark', 'Černé detaily očí', 'Dark eye details', '#000000'],
   ['iris', 'Duhovka (slepé oko)', 'Iris (blind eye)', '#00B1B7'],
 ];
-const MOUTH_ROLES = { pruh: ['mouthA', 'mouthB'], mrizka: ['mouthB', 'mouthA'], usmev: ['mouthB', 'mouthA'], led: ['mouthA', 'mouthB'], zadna: [] };
+const MOUTH_ROLES = { pruh: ['mouthA', 'mouthB'], mrizka: ['mouthB', 'mouthA'], usmev: ['mouthB', 'mouthA'], zadna: [] };
+// role, ktere muzou mit barvu "zadna" = prevezmou barvu dilu, do ktereho jsou vlozene
+const PARENT = { mouthA: 'main', mouthB: 'main', badge: 'main', symbol: 'badge', iris: 'dark' };
+const col = r => (S.col[r] === 'none' && PARENT[r]) ? col(PARENT[r]) : S.col[r];
 const EYE_ROLES = { klasik: ['eyes'], nyty: ['eyes'], sestihran: ['eyes'], objektiv: ['eyes'], monokl: ['monokl', 'dark'], slepe: ['eyes', 'dark', 'iris'] };
 
 // ------------------------------------------------------------------ stav (i v adrese stranky)
-const S = { head: 'hranata', body: 'hranate', mouth: 'pruh', eyeL: 'klasik', eyeR: 'klasik', ant: 'klasik', badge: 'logo', col: {} };
+const S = { head: 'hranata', body: 'hranate', mouth: 'pruh', eyeL: 'klasik', eyeR: 'klasik', ant: 'klasik', badge: 'kolo', col: {} };
 for (const r of ROLES) S.col[r[0]] = r[3];
 let lang = 'cs';
 function loadHash() {
@@ -63,12 +72,16 @@ function loadHash() {
     const list = OPT[k.startsWith('eye') ? 'eye' : k];
     if (p.get(k) && list.some(o => o[0] === p.get(k))) S[k] = p.get(k);
   }
-  for (const r of ROLES) { const c = p.get('c_' + r[0]); if (c && /^[0-9a-fA-F]{6}$/.test(c)) S.col[r[0]] = '#' + c.toUpperCase(); }
+  for (const r of ROLES) {
+    const c = p.get('c_' + r[0]);
+    if (c && /^[0-9a-fA-F]{6}$/.test(c)) S.col[r[0]] = '#' + c.toUpperCase();
+    else if (c === 'none' && PARENT[r[0]]) S.col[r[0]] = 'none';
+  }
 }
 function saveHash() {
   const p = new URLSearchParams();
   for (const k of ['head', 'body', 'mouth', 'eyeL', 'eyeR', 'ant', 'badge']) p.set(k, S[k]);
-  for (const r of ROLES) p.set('c_' + r[0], S.col[r[0]].slice(1));
+  for (const r of ROLES) p.set('c_' + r[0], S.col[r[0]] === 'none' ? 'none' : S.col[r[0]].slice(1));
   history.replaceState(null, '', '#' + p.toString());
 }
 
@@ -87,8 +100,15 @@ function partsFor() {
   P.eyes.push({ id: 'bracket_L', role: 'main', obj: 'drzak_oka_levy' });
   P.eyes.push({ id: 'bracket_R', role: 'main', obj: 'drzak_oka_pravy' });
   P.extra.push({ id: `antenna_${S.ant}`, role: 'antenna', obj: 'antena' });
-  P.extra.push({ id: `badge_${S.badge}_0`, role: 'badge', obj: 'znak' });
-  if (S.badge !== 'prazdny') P.extra.push({ id: `badge_${S.badge}_1`, role: 'symbol', obj: 'znak' });
+  if (S.badge === 'vlastni' && customLogo) {
+    P.extra.push({ id: 'custom_base', role: 'badge', obj: 'znak' }, { id: 'custom_top', role: 'badge', obj: 'znak' });
+    if (customLogo.islands) P.extra.push({ id: 'custom_island', role: 'badge', obj: 'znak' });
+    P.extra.push({ id: 'custom_sym', role: 'symbol', obj: 'znak' });
+  } else {
+    const k = S.badge === 'vlastni' ? 'prazdny' : S.badge;
+    P.extra.push({ id: `badge_${k}_0`, role: 'badge', obj: 'znak' });
+    if (k !== 'prazdny') P.extra.push({ id: `badge_${k}_1`, role: 'symbol', obj: 'znak' });
+  }
   return P;
 }
 const allParts = () => Object.values(partsFor()).flat();
@@ -133,6 +153,8 @@ for (const x of [-28.5, 28.5]) {
 }
 
 let MATS = {};   // id dilu -> matice do sestavy
+let META = { HH: 84, headTop: {} };
+let customLogo = null;   // {islands: bool}
 const loader = new STLLoader();
 const geoCache = new Map();   // id -> Promise<BufferGeometry>
 const meshes = new Map();     // id -> Mesh
@@ -160,11 +182,15 @@ async function syncScene() {
     if (!m) {
       m = new THREE.Mesh(await geo(p.id), material('#ffffff'));
       m.matrixAutoUpdate = false;
-      m.matrix.fromArray(MATS[p.id]);
+      m.matrix.fromArray(MATS[p.id] || MATS['badge_prazdny_0']);
       scene.add(m); meshes.set(p.id, m);
     }
     m.visible = true;
-    m.material = material(S.col[p.role]);
+    m.material = material(col(p.role));
+    if (p.id.startsWith('antenna_')) {     // antena sedi na temeni zvolene hlavy
+      m.matrix.fromArray(MATS[p.id]);
+      m.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, 0, META.headTop[S.head] - META.HH));
+    }
   }
   $('loading').classList.add('hide');
 }
@@ -200,15 +226,22 @@ function colorRows() {
     const w = document.createElement('span'); w.className = 'sw';
     const sel = document.createElement('select');
     let match = false;
+    if (PARENT[id]) {
+      const o = document.createElement('option'); o.value = 'none';
+      const pn = ROLES.find(r => r[0] === PARENT[id]);
+      o.textContent = (lang === 'cs' ? 'žádná (jako ' : 'none (as ') + (lang === 'cs' ? pn[1] : pn[2]).toLowerCase() + ')';
+      if (S.col[id] === 'none') { o.selected = true; match = true; }
+      sel.appendChild(o);
+    }
     for (const [n, h] of PALETTE) {
       const o = document.createElement('option'); o.value = h; o.textContent = n;
-      if (h.toUpperCase() === S.col[id].toUpperCase()) { o.selected = true; match = true; }
+      if (S.col[id] !== 'none' && h.toUpperCase() === S.col[id].toUpperCase()) { o.selected = true; match = true; }
       sel.appendChild(o);
     }
     const o = document.createElement('option'); o.value = ''; o.textContent = lang === 'cs' ? 'vlastní…' : 'custom…';
     if (!match) o.selected = true; sel.appendChild(o);
-    const pick = document.createElement('input'); pick.type = 'color'; pick.value = S.col[id];
-    sel.onchange = () => { if (sel.value) { S.col[id] = sel.value; pick.value = sel.value; changed(false); } else pick.click(); };
+    const pick = document.createElement('input'); pick.type = 'color'; pick.value = col(id);
+    sel.onchange = () => { if (sel.value) { S.col[id] = sel.value; pick.value = col(id); changed(false); colorRows(); } else pick.click(); };
     pick.oninput = () => { S.col[id] = pick.value.toUpperCase(); changed(false); };
     pick.onchange = () => colorRows();
     w.append(sel, pick); box.append(l, w);
@@ -225,6 +258,9 @@ function renderPanel() {
   optButtons($('o_mouth'), OPT.mouth, 'mouth'); optButtons($('o_eyeL'), OPT.eye, 'eyeL');
   optButtons($('o_eyeR'), OPT.eye, 'eyeR'); optButtons($('o_ant'), OPT.ant, 'ant'); optButtons($('o_badge'), OPT.badge, 'badge');
   $('rowR').classList.toggle('hide', $('same').checked);
+  $('blindNote').classList.toggle('hide', !(S.eyeL === 'slepe' || S.eyeR === 'slepe'));
+  $('skirtNote').classList.toggle('hide', S.ant === 'klasik');
+  $('customBox').classList.toggle('hide', S.badge !== 'vlastni');
   colorRows();
 }
 function changed(panel = true) {
@@ -242,6 +278,78 @@ $('share').onclick = async () => {
   catch (e) { $('msg').textContent = location.href; }
 };
 
+// ------------------------------------------------------------------ vlastni logo (SVG -> vlozka ve stitku)
+async function loadLogo(file) {
+  const msg = t => { $('logoMsg').textContent = t; };
+  try {
+    const text = await file.text();
+    const data = new SVGLoader().parse(text);
+    let shapes = [];
+    for (const path of data.paths) {
+      const st = path.userData && path.userData.style;
+      if (st && st.fill === 'none') continue;          // jen vyplnene tvary
+      shapes.push(...SVGLoader.createShapes(path));
+    }
+    if (!shapes.length) throw new Error(lang === 'cs' ? 'V souboru nejsou žádné vyplněné tvary.' : 'No filled shapes in the file.');
+    if (shapes.length > 300) throw new Error(lang === 'cs' ? 'Logo je příliš složité (víc než 300 tvarů).' : 'Logo too complex (over 300 shapes).');
+    // rozmery a meritko: vejit do 42 x 24 mm, SVG ma osu y dolu
+    const box = new THREE.Box2();
+    for (const sh of shapes) for (const p of sh.getPoints(24)) box.expandByPoint(p);
+    const w = box.max.x - box.min.x, h = box.max.y - box.min.y;
+    if (!(w > 0 && h > 0)) throw new Error('empty');
+    const k = Math.min(42 / w, 24 / h), cx = (box.min.x + box.max.x) / 2, cy = (box.min.y + box.max.y) / 2;
+    // stred stitku v tiskove poloze (podle prazdneho stitku)
+    const blank = await geo('badge_prazdny_0');
+    blank.computeBoundingBox();
+    const bb = blank.boundingBox, bx = (bb.min.x + bb.max.x) / 2, by = (bb.min.y + bb.max.y) / 2, ztop = bb.max.z;
+    const tf = v => new THREE.Vector2(bx + (v.x - cx) * k, by - (v.y - cy) * k);
+    const sym = [], holesAsIslands = [];
+    for (const sh of shapes) {
+      let outer = sh.getPoints(24).map(tf);
+      if (THREE.ShapeUtils.isClockWise(outer)) outer.reverse();
+      const s2 = new THREE.Shape(outer);
+      for (const hole of sh.holes) {
+        let hp = hole.getPoints(24).map(tf);
+        if (!THREE.ShapeUtils.isClockWise(hp)) hp.reverse();
+        s2.holes.push(new THREE.Path(hp));
+        holesAsIslands.push(new THREE.Shape([...hp].reverse()));
+      }
+      sym.push(s2);
+    }
+    // stitek: obdelnik se zaoblenymi rohy
+    const B = META.badge, rr = new THREE.Shape(), W = B.w / 2, H = B.h / 2, r = B.r;
+    rr.moveTo(bx - W + r, by - H); rr.lineTo(bx + W - r, by - H); rr.absarc(bx + W - r, by - H + r, r, -Math.PI / 2, 0);
+    rr.lineTo(bx + W, by + H - r); rr.absarc(bx + W - r, by + H - r, r, 0, Math.PI / 2);
+    rr.lineTo(bx - W + r, by + H); rr.absarc(bx - W + r, by + H - r, r, Math.PI / 2, Math.PI);
+    rr.lineTo(bx - W, by - H + r); rr.absarc(bx - W + r, by - H + r, r, Math.PI, Math.PI * 1.5);
+    const topShape = new THREE.Shape(rr.getPoints(12));
+    for (const s2 of sym) topShape.holes.push(new THREE.Path(s2.getPoints(24)));
+    const ext = (sh, z0, d) => { const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false, curveSegments: 12 }); g.translate(0, 0, z0); g.computeVertexNormals(); return g; };
+    const sd = B.sym, base = B.t - sd;
+    const gBase = ext(new THREE.Shape(rr.getPoints(12)), ztop - B.t, base);
+    const gTop = ext(topShape, ztop - sd, sd);
+    const gSym = ext(sym, ztop - sd, sd);
+    for (const id of ['custom_base', 'custom_top', 'custom_island', 'custom_sym']) {
+      geoCache.delete(id);
+      const m = meshes.get(id); if (m) { scene.remove(m); meshes.delete(id); }
+    }
+    geoCache.set('custom_base', Promise.resolve(gBase));
+    geoCache.set('custom_top', Promise.resolve(gTop));
+    geoCache.set('custom_sym', Promise.resolve(gSym));
+    if (holesAsIslands.length) geoCache.set('custom_island', Promise.resolve(ext(holesAsIslands, ztop - sd, sd)));
+    for (const id of ['custom_base', 'custom_top', 'custom_island', 'custom_sym']) MATS[id] = MATS['badge_prazdny_0'];
+    customLogo = { islands: holesAsIslands.length > 0, name: file.name };
+    const mm = x => x.toFixed(1).replace('.', lang === 'cs' ? ',' : '.');
+    msg((lang === 'cs' ? '✓ Načteno: ' : '✓ Loaded: ') + file.name + ` (${mm(w * k)} × ${mm(h * k)} mm, ` + (lang === 'cs' ? 'počet tvarů: ' : 'shapes: ') + shapes.length + ')');
+    changed();
+  } catch (e) {
+    customLogo = null;
+    msg((lang === 'cs' ? 'Logo se nepodařilo načíst: ' : 'Could not load the logo: ') + e.message);
+    changed();
+  }
+}
+$('logoFile').onchange = e => { const f = e.target.files[0]; if (f) loadLogo(f); };
+
 // ------------------------------------------------------------------ export 3MF
 function colorName(hex) {
   const p = PALETTE.find(x => x[1].toUpperCase() === hex.toUpperCase());
@@ -249,6 +357,7 @@ function colorName(hex) {
 }
 // mesh s odstranenymi duplicitnimi vrcholy
 function meshData(g) {
+  if (g.index) g = g.toNonIndexed();
   const pos = g.attributes.position.array, map = new Map(), verts = [], tris = [];
   const idx = [];
   for (let i = 0; i < pos.length; i += 3) {
@@ -269,7 +378,7 @@ async function build3mf(fileName, parts) {
     o.parts.push(p);
   }
   const colors = [];
-  for (const p of parts) { const c = S.col[p.role].toUpperCase(); if (!colors.includes(c)) colors.push(c); }
+  for (const p of parts) { const c = col(p.role).toUpperCase(); if (!colors.includes(c)) colors.push(c); }
   // rozmisteni na podlozce 256 x 256 (radky)
   for (const o of objs) {
     const bb = new THREE.Box3();
@@ -296,7 +405,7 @@ async function build3mf(fileName, parts) {
     const comps = [], cparts = [];
     for (const p of o.parts) {
       const { verts, tris } = meshData(await geo(p.id));
-      const ci = colors.indexOf(S.col[p.role].toUpperCase());
+      const ci = colors.indexOf(col(p.role).toUpperCase());
       const v = [], t = [];
       for (let i = 0; i < verts.length; i += 3) v.push(`<vertex x="${verts[i].toFixed(3)}" y="${verts[i + 1].toFixed(3)}" z="${verts[i + 2].toFixed(3)}"/>`);
       for (let i = 0; i < tris.length; i += 3) t.push(`<triangle v1="${tris[i]}" v2="${tris[i + 1]}" v3="${tris[i + 2]}"/>`);
@@ -347,6 +456,9 @@ function readme(info) {
   L.push(cs ? 'Tisk: PLA/PETG, vrstva 0,2 mm, 4 perimetry, výplň 15–20 % gyroid, BEZ podpěr. Rozmístění na podložce můžeš upravit tlačítkem Arrange.'
             : 'Print: PLA/PETG, 0.2 mm layers, 4 walls, 15–20 % gyroid infill, NO supports. Use Arrange to re-arrange the plate if needed.');
   L.push('');
+  if (S.ant !== 'klasik') L.push(cs ? 'Anténa se tiskne nastojato s tenkou „sukní“ pod čepem – po tisku ji odstřihni.' : 'The antenna prints standing up with a thin "skirt" under the peg – cut it off after printing.');
+  if (S.eyeL === 'slepe' || S.eyeR === 'slepe') L.push(cs ? 'Slepé oko zakrývá displej – na tom oku nebude nic vidět.' : 'The blind eye covers the display – nothing is visible on that eye.');
+  L.push('');
   L.push(cs ? 'MATERIÁL' : 'HARDWARE');
   L.push(cs ? '- deska Waveshare ESP32-S3-DualEye-LCD-1.28' : '- Waveshare ESP32-S3-DualEye-LCD-1.28 board');
   L.push(cs ? '- 16× šroub M3×8 imbus, 16× zalisovací matice M3 (OD 4,5 mm, délka 4 mm)' : '- 16× M3×8 hex socket screw, 16× M3 heat-set insert (OD 4.5 mm, L 4 mm)');
@@ -357,8 +469,7 @@ function readme(info) {
             : 'Before printing the head, print the test piece 00_test_oko.stl from GitHub and check the display fit.');
   L.push(cs ? 'Montáž: https://github.com/Frenkeeone/nw3d-01/blob/main/cad/README.cs.md' : 'Assembly: https://github.com/Frenkeeone/nw3d-01/blob/main/cad/README.md');
   L.push(cs ? 'Firmware: https://frenkeeone.github.io/nw3d-01/' : 'Firmware: https://frenkeeone.github.io/nw3d-01/');
-  L.push('', cs ? 'Licence modelů: CC BY-NC-SA 4.0 (nekomerčně). Logo NorthWeave3D není součástí licence.'
-                : 'Model licence: CC BY-NC-SA 4.0 (non-commercial). The NorthWeave3D logo is not covered by the licence.');
+  L.push('', cs ? 'Licence modelů: CC BY-NC-SA 4.0 (nekomerčně).' : 'Model licence: CC BY-NC-SA 4.0 (non-commercial).');
   return L.join('\r\n');
 }
 $('dl').onclick = async () => {
@@ -389,5 +500,6 @@ try { lang = localStorage.getItem('lang') || (/^(cs|sk)/i.test(navigator.languag
 loadHash();
 if (S.eyeL !== S.eyeR) $('same').checked = false;
 renderPanel(); resize();
-fetch('parts/matrices.json').then(r => r.json()).then(m => { MATS = m; syncScene(); })
+Promise.all([fetch('parts/matrices.json').then(r => r.json()), fetch('parts/meta.json').then(r => r.json())])
+  .then(([m, meta]) => { MATS = m; META = meta; syncScene(); })
   .catch(e => { $('loading').textContent = 'Error: ' + e.message; });

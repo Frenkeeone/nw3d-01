@@ -38,7 +38,7 @@ No computer at hand? A robot without Wi-Fi settings opens its own network **NW3D
 | Screw M2 × 6 | 4 | into the board's brass standoffs |
 | Silicone feet Ø 11 mm | 4 | |
 | Foam double-sided tape | small piece | speaker |
-| Super glue | | eye rings, logo |
+| Super glue | | eye rings, chest badge |
 | USB-C data cable + 5 V adapter | 1 | thin and flexible is best |
 | Filament | ≈ 250 g | main colour (light grey in the photos) + small amounts of yellow, black and cyan |
 
@@ -56,7 +56,6 @@ The filament amount is an estimate from the model volume; your slicer will tell 
 - Firmware and scripts: [MIT](LICENSE)
 - 3D models (`cad/`): [CC BY-NC-SA 4.0](cad/LICENSE) – share and remix, non-commercial
 - Third-party parts: Chakra Petch font (SIL OFL 1.1), Espressif GC9A01 and ES8311 drivers (Apache 2.0) – see [NOTICE.md](NOTICE.md)
-- The NorthWeave3D logo on the chest is not covered by these licences; replace it with your own.
 
 Unofficial project, not affiliated with Bambu Lab, Waveshare or Yahoo. The Bambu printer message format is undocumented and may change with printer firmware updates.
 
@@ -81,4 +80,4 @@ Bez počítače: robot, který nezná Wi-Fi, vytvoří vlastní síť **NW3D-xxx
 
 **Soukromí:** **autor projektu žádná vaše data nesbírá, nedostává ani k nim nemá přístup** – neprovozuje žádný server ani analytiku. Wi-Fi, nastavení, přístupový token a volitelné heslo k webu robota zůstávají jen v paměti robota (heslo jen jako otisk SHA-256 se solí). Heslo k Bambu účtu se použije jednou a neukládá se. Robot komunikuje jen s vaší tiskárnou, servery Bambu Lab, Open-Meteo, Yahoo Finance a GitHubem. Instalační stránka je statická na GitHub Pages (instalátor se načítá z unpkg.com); tyto služby vidí IP adresy návštěvníků podle svých pravidel. Web robota lze chránit heslem (Systém → Heslo); zapomenuté heslo = znovu nahrát firmware se smazáním zařízení.
 
-**Licence:** firmware MIT, modely CC BY-NC-SA 4.0 (nekomerčně). Logo NorthWeave3D na hrudi licencí pokryté není.
+**Licence:** firmware MIT, modely CC BY-NC-SA 4.0 (nekomerčně).
