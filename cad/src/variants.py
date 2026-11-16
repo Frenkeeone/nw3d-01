@@ -144,7 +144,7 @@ MOUTHS = ["pruh", "mrizka", "usmev", "zadna"]
 def mouth_shapes(kind):
     """Vrati [(role, shapely tvar v rovine XZ)] - role 'mouthA' / 'mouthB'."""
     if kind == "pruh":
-        z0, z1, x0, x1 = 13.0, 23.0, -46.0, 46.0
+        z0, z1, x0, x1 = 13.0, 23.0, -42.0, 42.0
         band = sbox(x0, z0, x1, z1)
         pitch, w, lean = 10.0, 5.0, z1 - z0
         dark = []
@@ -155,15 +155,15 @@ def mouth_shapes(kind):
         dark = unary_union(dark).intersection(band)
         return [("mouthA", band.difference(dark)), ("mouthB", dark)]
     if kind == "mrizka":
-        slots = [LineString([(-36, z), (36, z)]).buffer(1.25, cap_style=1) for z in (12.5, 16.0, 19.5, 23.0)]
-        frame = sbox(-42, 9.5, 42, 26).difference(sbox(-40.5, 11.0, 40.5, 24.5))
+        slots = [LineString([(-33, z), (33, z)]).buffer(1.1, cap_style=1) for z in (12.0, 15.0, 18.0)]
+        frame = sbox(-39, 7.5, 39, 21.5).difference(sbox(-37.5, 9.0, 37.5, 20.0))
         return [("mouthB", unary_union(slots)), ("mouthA", frame)]
     if kind == "usmev":
-        cx, cz, r = 0.0, 44.0, 28.0
+        cx, cz, r = 0.0, 41.0, 28.0
         arc = LineString([(cx + r * math.cos(math.radians(a)), cz + r * math.sin(math.radians(a)))
                           for a in range(228, 313, 2)])
         smile = arc.buffer(2.6, cap_style=1)
-        dimples = unary_union([Point(sx * 23.2, 20.5).buffer(1.6, resolution=24) for sx in (-1, 1)])
+        dimples = unary_union([Point(sx * 23.2, 17.5).buffer(1.6, resolution=24) for sx in (-1, 1)])
         return [("mouthB", smile), ("mouthA", dimples)]
     return []
 
