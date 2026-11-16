@@ -5,7 +5,9 @@ English: [README.md](README.md). Soubory: `stl/`, `3mf/` (vícebarevné díly), 
 Celková výška 165 mm (s nožičkami asi 168 mm), hlava 124 × 84 × 64 mm. Elektronika je jedna deska Waveshare DualEye (ESP32-S3 + 2 kulaté displeje 1,28"), uložená v hlavě. Desku **nerozdělovat**.
 
 ## Varianty a konfigurátor
-**[Konfigurátor](https://frenkeeone.github.io/nw3d-01/konfigurator/)** kombinuje 4 tvary hlavy, 5 tvarů těla, 5 typů pusy, 6 stylů prstenců očí (každé oko zvlášť), 4 antény a 6 znaků na hrudi v libovolných barvách a vyexportuje hotové soubory 3MF. Varianty vytváří `src/variants.py`, všechny díly pro konfigurátor znovu vygeneruje `python3 src/export_configurator.py` (potřebuje `pip install cadquery trimesh shapely scikit-image`).
+**[Konfigurátor](https://frenkeeone.github.io/nw3d-01/konfigurator/)** kombinuje 4 tvary hlavy, 5 tvarů těla, 5 typů pusy, 6 stylů prstenců očí (každé oko zvlášť), 4 antény a 6 znaků na hrudi v libovolných barvách, hlavu i tělo ve třech velikostech (S/M/L), a vyexportuje hotové soubory 3MF. Varianty vytváří `src/variants.py`, všechny díly pro konfigurátor znovu vygeneruje `python3 src/export_configurator.py` (potřebuje `pip install cadquery trimesh shapely scikit-image`).
+
+Velikost mění jen vnější tvar: deska, oči, držáky, krk a šrouby jsou ve všech velikostech stejné. Export kontroluje, že se deska do hlavy vejde (žádná kolize), že pusa má od okraje aspoň 2 mm (mřížka proto není na malé kulaté hlavě), že se štítek vejde na čelo těla a že na těle sedí příruba krku (malý zvon proto není). Konfigurátor navíc odhadne hmotnost, při jakém náklonu se robot převrhne a největší díl na podložce.
 
 Tělo z konfigurátoru má jednotné lůžko pro štítek (50 × 32 mm, hloubka 1 mm), takže jakýkoli znak pasuje na jakékoli tělo. Stejné lůžko má i základní tělo `06_telo`, `06a_stitek` je prázdný štítek. Znaky a vlastní logo (SVG) jsou v konfigurátoru.
 

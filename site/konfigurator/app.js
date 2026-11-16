@@ -14,6 +14,9 @@ const $ = id => document.getElementById(id);
 const T = {
   cs: {},
   en: {
+    size: 'Size', h_check: 'Check',
+    na_mouth: 'The grille does not fit on the small round head – switched to the warning stripe.',
+    na_body: 'The bell body is not available in the small size – switched to medium.',
     ar: 'View in your space (AR)', ar_title: 'Your robot at real size', ar_place: 'Place on your desk',
     ar_qr: 'Scan the code with your phone – the robot opens in the same configuration and you can place it on your desk at real size.',
     ar_nomob: 'This browser cannot do AR. Try Chrome on Android (with Google Play Services for AR) or Safari on iPhone.',
@@ -32,6 +35,8 @@ const T = {
   }
 };
 const OPT = {
+  hs: [['S', 'Malá', 'Small'], ['M', 'Střední', 'Medium'], ['L', 'Velká', 'Large']],
+  bs: [['S', 'Malé', 'Small'], ['M', 'Střední', 'Medium'], ['L', 'Velké', 'Large']],
   head: [['hranata', 'Hranatá', 'Boxy'], ['kulata', 'Kulatá', 'Round'], ['kopule', 'Kopule', 'Dome'], ['vejce', 'Vejce', 'Egg']],
   body: [['hranate', 'Klasik', 'Classic'], ['valec', 'Válec', 'Cylinder'], ['soudek', 'Soudek', 'Barrel'], ['zvon', 'Zvon', 'Bell'], ['pasy', 'Pásy', 'Tracks']],
   mouth: [['pruh', 'Výstražný pruh', 'Warning stripe'], ['mrizka', 'Mřížka', 'Grille'], ['usmev', 'Úsměv', 'Smile'],
@@ -69,12 +74,12 @@ const col = r => (S.col[r] === 'none' && PARENT[r]) ? col(PARENT[r]) : S.col[r];
 const EYE_ROLES = { klasik: ['eyes'], nyty: ['eyes'], sestihran: ['eyes'], objektiv: ['eyes'], monokl: ['monokl', 'dark'], slepe: ['eyes', 'dark', 'iris'] };
 
 // ------------------------------------------------------------------ stav (i v adrese stranky)
-const S = { head: 'hranata', body: 'hranate', mouth: 'pruh', eyeL: 'klasik', eyeR: 'klasik', ant: 'klasik', badge: 'kolo', col: {} };
+const S = { head: 'hranata', hs: 'M', body: 'hranate', bs: 'M', mouth: 'pruh', eyeL: 'klasik', eyeR: 'klasik', ant: 'klasik', badge: 'kolo', col: {} };
 for (const r of ROLES) S.col[r[0]] = r[3];
 let lang = 'cs';
 function loadHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  for (const k of ['head', 'body', 'mouth', 'eyeL', 'eyeR', 'ant', 'badge']) {
+  for (const k of ['head', 'hs', 'body', 'bs', 'mouth', 'eyeL', 'eyeR', 'ant', 'badge']) {
     const list = OPT[k.startsWith('eye') ? 'eye' : k];
     if (p.get(k) && list.some(o => o[0] === p.get(k))) S[k] = p.get(k);
   }
@@ -86,19 +91,29 @@ function loadHash() {
 }
 function saveHash() {
   const p = new URLSearchParams();
-  for (const k of ['head', 'body', 'mouth', 'eyeL', 'eyeR', 'ant', 'badge']) p.set(k, S[k]);
+  for (const k of ['head', 'hs', 'body', 'bs', 'mouth', 'eyeL', 'eyeR', 'ant', 'badge']) p.set(k, S[k]);
   for (const r of ROLES) p.set('c_' + r[0], S.col[r[0]] === 'none' ? 'none' : S.col[r[0]].slice(1));
   history.replaceState(null, '', '#' + p.toString());
 }
 
 // ------------------------------------------------------------------ dily podle konfigurace
+const suf = sz => sz === 'M' ? '' : '_' + sz;
+const mouthOk = (head, mouth, hs) => !(META.mouthNA || []).includes(`${head}_${mouth}_${hs}`);
+const bodyOk = (body, bs) => !(META.bodyNA || []).includes(`${body}_${bs}`);
+// neplatne kombinace (napr. mrizka na male kulate hlave) opravi a vrati upozorneni
+function fixCombos() {
+  const notes = [];
+  if (!mouthOk(S.head, S.mouth, S.hs)) { S.mouth = 'pruh'; notes.push('na_mouth'); }
+  if (!bodyOk(S.body, S.bs)) { S.bs = 'M'; notes.push('na_body'); }
+  return notes;
+}
 function partsFor() {
   const P = { head: [], body: [], eyes: [], extra: [] };
-  P.head.push({ id: `head_${S.head}_${S.mouth}`, role: 'main', obj: 'hlava' });
+  P.head.push({ id: `head_${S.head}_${S.mouth}${suf(S.hs)}`, role: 'main', obj: 'hlava' });
   MOUTH_ROLES[S.mouth].forEach((role, i) => P.head.push({ id: `mouth_${S.mouth}_${i}`, role, obj: 'hlava' }));
-  P.body.push({ id: `body_${S.body}`, role: 'main', obj: 'telo' });
-  P.body.push({ id: `bottom_${S.body}`, role: 'main', obj: 'spodni_viko' });
-  P.body.push({ id: `back_${S.head}`, role: 'main', obj: 'zadni_viko' });
+  P.body.push({ id: `body_${S.body}${suf(S.bs)}`, role: 'main', obj: 'telo' });
+  P.body.push({ id: `bottom_${S.body}${suf(S.bs)}`, role: 'main', obj: 'spodni_viko' });
+  P.body.push({ id: `back_${S.head}${suf(S.hs)}`, role: 'main', obj: 'zadni_viko' });
   P.body.push({ id: 'neck', role: 'neck', obj: 'krk' });
   for (const [side, key, name] of [['L', 'eyeL', 'oko_leve'], ['R', 'eyeR', 'oko_prave']]) {
     EYE_ROLES[S[key]].forEach((role, i) => P.eyes.push({ id: `eye_${S[key]}_${side}_${i}`, role, obj: name }));
@@ -158,6 +173,15 @@ for (const x of [-28.5, 28.5]) {
   const d = new THREE.Mesh(new THREE.CircleGeometry(16.6, 48), eyeMat);
   d.rotation.x = Math.PI / 2; d.position.set(x, -29.3, 107); scene.add(d); eyeDiscs.push(d);
 }
+// vse nad telem se posouva podle vysky zvoleneho tela
+const UPPER = /^(head_|mouth_|back_|neck|eye_|bracket_|antenna_)/;
+const bodyDz = () => (META.bodyH && META.bodyH[S.body] ? META.bodyH[S.body][S.bs] - META.BH : 0);
+const headTopNow = () => (META.headTopSz ? META.headTopSz[S.head][S.hs] : META.headTop[S.head]);
+function badgeMount() {
+  const k = `${S.body}_${S.bs}`;
+  if (META.badgeMountSz && META.badgeMountSz[k]) return META.badgeMountSz[k];
+  return META.badgeMount && META.badgeMount[S.body];
+}
 
 let MATS = {};   // id dilu -> matice do sestavy
 let META = { HH: 84, headTop: {} };
@@ -165,8 +189,9 @@ let customLogo = null;   // {islands: bool}
 const loader = new STLLoader();
 const geoCache = new Map();   // id -> Promise<BufferGeometry>
 const meshes = new Map();     // id -> Mesh
+const loadedGeo = new Map();   // id -> nactena BufferGeometry
 function geo(id) {
-  if (!geoCache.has(id)) geoCache.set(id, loader.loadAsync(`parts/${id}.stl`).then(g => { g.computeVertexNormals(); return g; }));
+  if (!geoCache.has(id)) geoCache.set(id, loader.loadAsync(`parts/${id}.stl`).then(g => { g.computeVertexNormals(); loadedGeo.set(id, g); return g; }));
   return geoCache.get(id);
 }
 const matCache = {};
@@ -189,21 +214,22 @@ async function syncScene() {
     if (!m) {
       m = new THREE.Mesh(await geo(p.id), material('#ffffff'));
       m.matrixAutoUpdate = false;
-      m.matrix.fromArray(MATS[p.id] || MATS['badge_prazdny_0']);
       scene.add(m); meshes.set(p.id, m);
     }
     m.visible = true;
     m.material = material(col(p.role));
+    m.matrix.fromArray(MATS[p.id] || MATS['badge_prazdny_0']);
     if (p.id.startsWith('badge_') || p.id.startsWith('custom_')) {   // stitek na celni plose zvoleneho tela
-      m.matrix.fromArray(MATS[p.id] || MATS['badge_prazdny_0']);
-      const mount = META.badgeMount && META.badgeMount[S.body];
+      const mount = badgeMount();
       if (mount) m.matrix.premultiply(new THREE.Matrix4().fromArray(mount));
     }
-    if (p.id.startsWith('antenna_')) {     // antena sedi na temeni zvolene hlavy
-      m.matrix.fromArray(MATS[p.id]);
-      m.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, 0, META.headTop[S.head] - META.HH));
-    }
+    let dz = UPPER.test(p.id) ? bodyDz() : 0;
+    if (p.id.startsWith('antenna_')) dz += headTopNow() - META.HH;   // antena sedi na temeni zvolene hlavy
+    if (dz) m.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, 0, dz));
   }
+  for (const d of eyeDiscs) { d.position.z = 107 + bodyDz(); d.updateMatrix(); }
+  controls.target.z = 78 + bodyDz() / 2;
+  checks(want);
   $('loading').classList.add('hide');
 }
 
@@ -267,6 +293,9 @@ function renderPanel() {
   for (const b of document.querySelectorAll('.lang button')) b.classList.toggle('on', b.dataset.l === lang);
   document.documentElement.lang = lang;
   optButtons($('o_head'), OPT.head, 'head'); optButtons($('o_body'), OPT.body, 'body');
+  optButtons($('o_hs'), OPT.hs, 'hs'); optButtons($('o_bs'), OPT.bs, 'bs');
+  for (const b of $('o_mouth').children) b.disabled = !mouthOk(S.head, b.dataset.v, S.hs);
+  for (const b of $('o_bs').children) b.disabled = !bodyOk(S.body, b.dataset.v);
   optButtons($('o_mouth'), OPT.mouth, 'mouth'); optButtons($('o_eyeL'), OPT.eye, 'eyeL');
   optButtons($('o_eyeR'), OPT.eye, 'eyeR'); optButtons($('o_ant'), OPT.ant, 'ant'); optButtons($('o_badge'), OPT.badge, 'badge');
   $('rowR').classList.toggle('hide', $('same').checked);
@@ -276,6 +305,9 @@ function renderPanel() {
   colorRows();
 }
 function changed(panel = true) {
+  const notes = fixCombos();
+  $('comboNote').textContent = notes.map(n => lang === 'en' ? T.en[n] : CS_NOTES[n]).join(' ');
+  $('comboNote').classList.toggle('hide', !notes.length);
   saveHash();
   if (panel) renderPanel();
   syncScene();
@@ -456,7 +488,10 @@ function readme(info) {
   const cs = lang === 'cs';
   const L = [];
   L.push('NW3D-01 – ' + (cs ? 'tvůj robot' : 'your robot'), '');
-  L.push((cs ? 'Konfigurace: ' : 'Configuration: ') + location.href, '');
+  L.push((cs ? 'Konfigurace: ' : 'Configuration: ') + location.href);
+  const szn = v => ({ S: cs ? 'malá' : 'small', M: cs ? 'střední' : 'medium', L: cs ? 'velká' : 'large' })[v];
+  L.push((cs ? 'Velikost hlavy: ' : 'Head size: ') + szn(S.hs) + ', ' + (cs ? 'velikost těla: ' : 'body size: ') + szn(S.bs) +
+    (cs ? ' (deska, oči a šrouby jsou ve všech velikostech stejné)' : ' (board, eyes and screws are the same in every size)'), '');
   L.push(cs ? 'SOUBORY A FILAMENTY' : 'FILES AND FILAMENTS');
   for (const [name, colors, note] of info) {
     L.push(`${name}.3mf – ${note}`);
@@ -506,6 +541,72 @@ $('dl').onclick = async () => {
   }
   btn.disabled = false;
 };
+
+// ------------------------------------------------------------------ kontrola: stabilita a velikost podlozky
+const CS_NOTES = {
+  na_mouth: 'Mřížka se na malou kulatou hlavu nevejde – přepnuto na výstražný pruh.',
+  na_body: 'Zvon v malé velikosti není – přepnuto na střední.',
+};
+const BOARD = { vol: 28000, at: [0, -24, 107] };   // deska s displeji ~35 g (v mm3 PLA)
+function checks(want) {
+  if (!META.mass) return;
+  const cs = lang === 'cs';
+  // teziste
+  let V = 0, cx = 0, cy = 0, cz = 0;
+  const add = (v, x, y, z) => { V += v; cx += v * x; cy += v * y; cz += v * z; };
+  const dzUp = bodyDz();
+  for (const p of want) {
+    const m = META.mass[p.id]; if (!m) continue;
+    let dz = UPPER.test(p.id) ? dzUp : 0;
+    if (p.id.startsWith('antenna_')) dz += headTopNow() - META.HH;
+    add(m[0], m[1], m[2], m[3] + dz);
+  }
+  add(BOARD.vol, BOARD.at[0], BOARD.at[1], BOARD.at[2] + dzUp);
+  // uhel naklonu, pri kterem se robot prevrhne (teziste nad hranou oblasti, na ktere stoji)
+  const sup = (META.support[`${S.body}_${S.bs}`] || []).slice().sort((a, b) => Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]));
+  const tipAngle = (V, cx, cy, cz) => {
+    const x = cx / V, y = cy / V, z = cz / V;
+    let d = Infinity;
+    for (let i = 0; i < sup.length; i++) {
+      const [x1, y1] = sup[i], [x2, y2] = sup[(i + 1) % sup.length];
+      const ex = x2 - x1, ey = y2 - y1;
+      d = Math.min(d, Math.abs(ex * (y - y1) - ey * (x - x1)) / Math.hypot(ex, ey));
+    }
+    return Math.atan2(d, z + 3) * 180 / Math.PI;     // podlozka v z = -3
+  };
+  const ang = tipAngle(V, cx, cy, cz);
+  const W = 100 / (1.24e-3 * 0.8);                    // 100 g zavazi na dne tela
+  const angW = tipAngle(V + W, cx, cy, cz + W * 5);
+  const grams = Math.round(V * 1.24e-3 * 0.8 / 5) * 5;
+  // meritko: zakladni robot (strední hlava i telo) se prevrhne pri ~13°
+  let st, cls;
+  if (ang >= 12) { st = cs ? 'stojí pevně' : 'stands firmly'; cls = 'ok'; }
+  else if (ang >= 9.5) { st = cs ? 'v pořádku, jen pozor na tah kabelu' : 'fine, just mind the cable pulling'; cls = 'ok'; }
+  else {
+    st = (cs ? 'snáz se převrhne – zvol větší tělo nebo menší hlavu, nebo vlož na dno těla asi 100 g závaží (např. podložky M8), pak ' :
+               'tips over more easily – pick a larger body or a smaller head, or put about 100 g of weight on the bottom of the body (e.g. M8 washers), then ') +
+         Math.round(angW) + '°'; cls = 'warn';
+  }
+  // nejvetsi dil na podlozce (dily jsou v tiskove poloze)
+  let big = null;
+  const sizes = want.map(p => { const g = loadedGeo.get(p.id); if (!g) return null; g.computeBoundingBox(); const b = g.boundingBox;
+    return { id: p.id, w: b.max.x - b.min.x, d: b.max.y - b.min.y, h: b.max.z - b.min.z }; }).filter(Boolean);
+  for (const s of sizes) if (!big || Math.max(s.w, s.d) > Math.max(big.w, big.d)) big = s;
+  const mm = v => Math.round(v);
+  let bed = '';
+  if (big) {
+    const m = Math.max(big.w, big.d);
+    bed = (cs ? 'Největší díl na podložce: ' : 'Largest part on the bed: ') + `${mm(big.w)} × ${mm(big.d)} mm` + ' – ' +
+      (m <= 175 ? (cs ? 'vejde se na všechny tiskárny Bambu včetně A1 mini.' : 'fits every Bambu printer incl. the A1 mini.')
+       : m <= 250 ? (cs ? 'vejde se na A1, P1, X1 a H2D, ne na A1 mini (180 mm).' : 'fits the A1, P1, X1 and H2D, not the A1 mini (180 mm).')
+       : (cs ? 'nevejde se na podložku 256 mm!' : 'does not fit a 256 mm bed!'));
+  }
+  const H = headTopNow() + 58 + dzUp + 3;   // temeno + krk + telo + spodni viko (mm)
+  $('checks').innerHTML =
+    `<div>${cs ? 'Výška bez antény' : 'Height without antenna'}: <b>${(H / 10).toFixed(1).replace('.', cs ? ',' : '.')} cm</b> · ${cs ? 'hmotnost cca' : 'weight approx.'} <b>${grams} g</b></div>` +
+    `<div class="${cls}">${cs ? 'Stabilita' : 'Stability'}: ${st} (${cs ? 'převrhne se až při náklonu' : 'tips over only when tilted by'} ${Math.round(ang)}°)</div>` +
+    (bed ? `<div>${bed}</div>` : '');
+}
 
 // ------------------------------------------------------------------ AR nahled
 // Viditelne dily -> GLB v metrech (glTF je Y nahoru) -> <model-viewer> s ar-scale="fixed" = skutecna velikost.
@@ -568,5 +669,5 @@ loadHash();
 if (S.eyeL !== S.eyeR) $('same').checked = false;
 renderPanel(); resize();
 Promise.all([fetch('parts/matrices.json').then(r => r.json()), fetch('parts/meta.json').then(r => r.json())])
-  .then(([m, meta]) => { MATS = m; META = meta; syncScene(); })
+  .then(([m, meta]) => { MATS = m; META = meta; changed(); })
   .catch(e => { $('loading').textContent = 'Error: ' + e.message; });

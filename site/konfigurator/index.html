@@ -36,6 +36,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);m
 .note ul{color:var(--txt)}#customBox{color:var(--txt);background:#141d23;border-color:var(--line)}
 #customBox input{margin:6px 0;max-width:100%}
 a{color:var(--acc)}
+.opts button:disabled{opacity:.35;cursor:not-allowed}
+#checks div{margin:3px 0}#checks .ok{color:#7be0a0}#checks .warn{color:var(--amb)}
 #arModal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:10;padding:12px}
 .mbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(680px,100%);max-height:100%;overflow:auto}
 .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.mhead .btn{padding:6px 12px}
@@ -57,7 +59,10 @@ ul{margin:6px 0;padding-left:18px}
   <div class="small dim" data-t="intro">Poskládej si robota, vyber barvy a stáhni soubory 3MF k tisku. Náhled otáčíš myší nebo prstem.</div>
 
   <h2 data-t="h_head">Hlava</h2><div class="opts" id="o_head"></div>
+  <div class="eyerow" style="margin-top:6px"><span class="small dim" data-t="size">Velikost</span><div class="opts" id="o_hs"></div></div>
   <h2 data-t="h_body">Tělo</h2><div class="opts" id="o_body"></div>
+  <div class="eyerow" style="margin-top:6px"><span class="small dim" data-t="size">Velikost</span><div class="opts" id="o_bs"></div></div>
+  <div class="note hide" id="comboNote"></div>
   <h2 data-t="h_mouth">Pusa</h2><div class="opts" id="o_mouth"></div>
   <h2 data-t="h_eyes">Oči</h2>
   <label class="check"><input type="checkbox" id="same" checked> <span data-t="same">stejné pro obě oči</span></label>
@@ -79,6 +84,9 @@ ul{margin:6px 0;padding-left:18px}
    <div class="small" id="logoMsg"></div>
    <div class="small dim" data-t="r5">Logo zůstává jen ve tvém prohlížeči a do odkazu na konfiguraci se neukládá.</div>
   </div>
+
+  <h2 data-t="h_check">Kontrola</h2>
+  <div class="small" id="checks"></div>
 
   <h2 data-t="h_colors">Barvy</h2>
   <div class="colors" id="colors"></div>

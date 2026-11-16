@@ -44,7 +44,37 @@ def rounded(w, d, rt, rb, n=10):
 HEAD_STYLES = ["hranata", "kulata", "kopule", "vejce"]
 
 
-def head_profile(style):
+HEAD_SIZES = {"S": 0.92, "M": 1.0, "L": 1.10}   # vnejsi tvar; deska, oci a pusa zustavaji
+HEAD_SIZE_FIX = {("kulata", "S"): 0.95}         # kulata hlava ma uzky spodek -> mensi zmenseni
+BODY_SIZES = {"S": 0.90, "M": 1.0, "L": 1.10}
+BODY_SIZE_NA = {("zvon", "S")}                   # maly zvon: nahore se nevejde stitek i priruba krku
+MIN_EDGE = 2.0                                   # min. okraj od prstence oka / pusy k obrysu hlavy
+
+
+def head_k(style, size):
+    return HEAD_SIZE_FIX.get((style, size), HEAD_SIZES[size])
+
+
+def body_k(style, size):
+    return BODY_SIZES[size]
+
+
+def mouth_fits(style, mouth, size):
+    """Vejde se pusa na celo hlavy dane velikosti (s okrajem MIN_EDGE)?"""
+    sh = mouth_shapes(mouth)
+    if not sh:
+        return True
+    prof = head_profile(style, head_k(style, size))
+    r = unary_union([s for _, s in sh])
+    return prof.contains(r) and prof.exterior.distance(r) >= MIN_EDGE
+
+
+def head_profile(style, k=1.0):
+    p = _head_profile(style)
+    return p if k == 1.0 else affinity.scale(p, k, k, origin=(0, 0))
+
+
+def _head_profile(style):
     if style == "hranata":
         return Polygon([(x, z + HH / 2) for x, z in R.octagon(HW, HH, 7.0)])
     if style == "kulata":            # kruh s rovnym spodkem
@@ -64,17 +94,17 @@ def head_profile(style):
     raise ValueError(style)
 
 
-def head_top(style):
+def head_top(style, k=1.0):
     """Vyska temene (z) uprostred - tam je otvor pro antenu."""
-    return head_profile(style).bounds[3]
+    return head_profile(style, k).bounds[3]
 
 
-def head_posts(style):
+def head_posts(style, k=1.0):
     """Polohy 4 zavitovych vlozek pro zadni viko (x, z)."""
     if style == "hranata":
-        bx, bz0, bz1 = HW / 2 - WALL - 8.0, WALL + 7.0, HH - WALL - 7.0
+        bx, bz0, bz1 = HW * k / 2 - WALL - 8.0, WALL + 7.0, HH * k - WALL - 7.0
         return [(sx * bx, z) for sx in (-1, 1) for z in (bz0, bz1)]
-    inner = head_profile(style).buffer(-WALL - 4.8)
+    inner = head_profile(style, k).buffer(-WALL - 4.8)
     minx, minz, maxx, maxz = inner.bounds
     zc = (minz + maxz) / 2
     out = []
@@ -176,16 +206,16 @@ def mouth_parts(kind):
 # --------------------------------------------------------------------------------------
 #  HLAVA
 # --------------------------------------------------------------------------------------
-def head(style, mouth):
-    prof = head_profile(style)
+def head(style, mouth, k=1.0):
+    prof = head_profile(style, k)
     outer = cq.Workplane("XZ").polyline(ring_pts(prof)).close().extrude(-HD)
     inner = (cq.Workplane("XZ").polyline(ring_pts(prof.buffer(-WALL, join_style=2))).close()
              .extrude(-(HD - FRONT + 1)).translate((0, FRONT, 0)))
     h = outer.cut(inner)
-    top = head_top(style)
+    top = head_top(style, k)
     zmid = (prof.bounds[1] + top) / 2
 
-    posts = head_posts(style)
+    posts = head_posts(style, k)
     for px, pz in posts:
         sx = 1 if px > 0 else -1
         sz = 1 if pz > zmid else -1
@@ -219,7 +249,7 @@ def head(style, mouth):
 
     # bocni zebra (jen hranata hlava - ostatni tvary maji oble boky)
     if style == "hranata":
-        h = add_fins(h)
+        h = add_fins(h, k)
     yc = HD / 2
     h = h.cut(cyl_z(NECK_ID, -1, WALL + 1, 0, yc))
     for sy in (-1, 1):
@@ -228,10 +258,11 @@ def head(style, mouth):
     return h
 
 
-def add_fins(h):
+def add_fins(h, k=1.0):
     FIN_OUT, FIN_Y0, FIN_Y1 = 7.0, 14.0, HD - 12.0
     run = FIN_OUT / 0.8
-    w0 = HW / 2 - 0.5
+    w0 = HW * k / 2 - 0.5
+    dz = HH * (k - 1) / 2
 
     def fin_profile(y_front, y_back, sx):
         p = [(w0, y_front), (w0 + FIN_OUT, y_front + run), (w0 + FIN_OUT, y_back), (w0, y_back)]
@@ -240,25 +271,25 @@ def add_fins(h):
     for sx in (-1, 1):
         prof = fin_profile(FIN_Y0, FIN_Y1, sx)
         for i in range(5):
-            zc = 38 + i * 6.5
+            zc = 38 + dz + i * 6.5
             h = h.union(cq.Workplane("XY").polyline(prof).close().extrude(2.4).translate((0, 0, zc - 1.2)))
         front = [(sx * w0, FIN_Y0), (sx * (w0 + FIN_OUT), FIN_Y0 + run),
                  (sx * (w0 + FIN_OUT), FIN_Y0 + run + 3), (sx * w0, FIN_Y0 + 3)]
-        h = h.union(cq.Workplane("XY").polyline(front).close().extrude(30.5).translate((0, 0, 36)))
+        h = h.union(cq.Workplane("XY").polyline(front).close().extrude(30.5).translate((0, 0, 36 + dz)))
         h = h.union(cq.Workplane("XY").polyline(fin_profile(FIN_Y1 - 3, FIN_Y1, sx)).close()
-                    .extrude(30.5).translate((0, 0, 36)))
+                    .extrude(30.5).translate((0, 0, 36 + dz)))
     return h
 
 
-def head_back(style):
-    prof = head_profile(style)
+def head_back(style, k=1.0):
+    prof = head_profile(style, k)
     t = 3.0
     c = cq.Workplane("XY").polyline(ring_pts(prof)).close().extrude(t)
     try:
         c = c.faces(">Z").edges().chamfer(1.0)
     except Exception:
         pass
-    for px, pz in head_posts(style):
+    for px, pz in head_posts(style, k):
         c = c.cut(cyl_z(CLR_M3, -1, t + 1, px, pz))
         c = c.cut(cyl_z(HEAD_M3, t - 1.6, t + 1, px, pz))
     zm = 42.0                                   # vetraci drazky a stitek kolem stredu desky
@@ -283,24 +314,25 @@ def badge_outline(offset=0.0):
     return Polygon(rounded(BADGE_W + 2 * offset, BADGE_H + 2 * offset, BADGE_R + offset, BADGE_R + offset))
 
 
-def on_chest(s):
+def on_chest(s, k=1.0):
     """Teleso postavene v rovine XZ (y = 0 je povrch tela) -> na sikmou celni stenu tela."""
-    return s.rotate((0, 0, 0), (1, 0, 0), -math.degrees(SLOPE)).translate((0, Y_FACE, BADGE_ZC))
+    return s.rotate((0, 0, 0), (1, 0, 0), -math.degrees(SLOPE)).translate((0, Y_FACE * k, BADGE_ZC * k))
 
 
-def body(style):
-    bo, to = body_outline(style, BW0, BD0, False), body_outline(style, BW1, BD1, True)
-    outer = cq.Workplane("XY").polyline(bo).close().workplane(offset=BH).polyline(to).close().loft()
-    bi = body_outline(style, BW0, BD0, False, WALL)
-    ti = body_outline(style, BW1, BD1, True, WALL)
-    inner = (cq.Workplane("XY").polyline(bi).close().workplane(offset=BH - WALL).polyline(ti).close()
+def body(style, k=1.0):
+    bh = BH * k
+    bo, to = body_outline(style, BW0 * k, BD0 * k, False), body_outline(style, BW1 * k, BD1 * k, True)
+    outer = cq.Workplane("XY").polyline(bo).close().workplane(offset=bh).polyline(to).close().loft()
+    bi = body_outline(style, BW0 * k, BD0 * k, False, WALL)
+    ti = body_outline(style, BW1 * k, BD1 * k, True, WALL)
+    inner = (cq.Workplane("XY").polyline(bi).close().workplane(offset=bh - WALL).polyline(ti).close()
              .loft().translate((0, 0, -0.01)))
     b = outer.cut(inner)
     try:
         b = b.faces(">Z").edges().chamfer(1.5)
     except Exception:
         pass
-    bx, by = BOSS_XY
+    bx, by = BOSS_XY[0] * k, BOSS_XY[1] * k
     for sx in (-1, 1):
         for sy in (-1, 1):
             b = b.union(corner_fill(outer, sx * (bx - 5), sy * (by - 5), sx, sy, "z", 0, 12, 12, steps=12))
@@ -308,27 +340,27 @@ def body(style):
         for sy in (-1, 1):
             b = b.cut(cyl_z(INS_M3, -1, INS_M3_D, sx * bx, sy * by))
     for sx in (-1, 1):
-        b = b.union(cyl_z(9.0, BH - WALL - 8, BH - 0.5, sx * NFL_HOLE_X, 0))
-        b = b.cut(cyl_z(INS_M3, BH - INS_M3_D, BH + 1, sx * NFL_HOLE_X, 0))
-    b = b.cut(cyl_z(NECK_ID, BH - WALL - 1, BH + 1, 0, 0))
-    b = b.cut(box(-6, 6, BD0 / 2 - 8, BD0 / 2 + 2, -1, 8.0))
-    b = b.cut(cyl_y(12, BD0 / 2 - 8, BD0 / 2 + 2, 0, 8.0))
+        b = b.union(cyl_z(9.0, bh - WALL - 8, bh - 0.5, sx * NFL_HOLE_X, 0))
+        b = b.cut(cyl_z(INS_M3, bh - INS_M3_D, bh + 1, sx * NFL_HOLE_X, 0))
+    b = b.cut(cyl_z(NECK_ID, bh - WALL - 1, bh + 1, 0, 0))
+    b = b.cut(box(-6, 6, BD0 * k / 2 - 8, BD0 * k / 2 + 2, -1, 8.0))
+    b = b.cut(cyl_y(12, BD0 * k / 2 - 8, BD0 * k / 2 + 2, 0, 8.0))
     for sx in (-1, 1):
         for i in range(3):
-            z = 22 + i * 6
-            x0, x1 = sx * (BW0 / 2 - 14), sx * (BW0 / 2 + 2)
+            z = (22 + i * 6) * k
+            x0, x1 = sx * (BW0 * k / 2 - 14), sx * (BW0 * k / 2 + 2)
             b = b.cut(box(min(x0, x1), max(x0, x1), -12, 12, z - 1.5, z + 1.5))
     # lozko pro stitek (v rovine XZ: x = sirka, z = vyska)
     pocket = solid_xz(badge_outline(BADGE_CLR), -1.0, BADGE_POCKET)
-    b = b.cut(on_chest(pocket))
+    b = b.cut(on_chest(pocket, k))
     return b
 
 
-def bottom_plate(style):
+def bottom_plate(style, k=1.0):
     t = PLATE_T
-    p = cq.Workplane("XY").polyline(body_outline(style, BW0, BD0, False)).close().extrude(t).translate((0, 0, -t))
+    p = cq.Workplane("XY").polyline(body_outline(style, BW0 * k, BD0 * k, False)).close().extrude(t).translate((0, 0, -t))
     p = p.faces("<Z").edges().chamfer(1.0)
-    bx, by = BOSS_XY
+    bx, by = BOSS_XY[0] * k, BOSS_XY[1] * k
     for sx in (-1, 1):
         for sy in (-1, 1):
             p = p.cut(cyl_z(CLR_M3, -t - 1, 1, sx * bx, sy * by))

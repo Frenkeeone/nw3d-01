@@ -18,16 +18,25 @@ def jobs():
     import variants as V
     J = []   # (id, builder, args, print_rotation_matrix_name)
     for st in V.HEAD_STYLES:
-        for m in V.MOUTHS:
-            J.append((f"head_{st}_{m}", "head", (st, m), "head"))
-        J.append((f"back_{st}", "back", (st,), "head"))
+        for sz in V.HEAD_SIZES:
+            suf = "" if sz == "M" else "_" + sz
+            k = V.head_k(st, sz)
+            for m in V.MOUTHS:
+                if V.mouth_fits(st, m, sz):
+                    J.append((f"head_{st}_{m}{suf}", "head", (st, m, k), "head"))
+            J.append((f"back_{st}{suf}", "back", (st, k), "head"))
     for m in V.MOUTHS:
         for i, (role, _) in enumerate(V.mouth_shapes(m)):
             J.append((f"mouth_{m}_{i}", "mouth", (m, i), "head"))
     import bodies as B
     for st in ["hranate"] + B.STYLES:
-        J.append((f"body_{st}", "body", (st,), "body"))
-        J.append((f"bottom_{st}", "bottom", (st,), "none"))
+        for sz in V.BODY_SIZES:
+            if (st, sz) in V.BODY_SIZE_NA:
+                continue
+            suf = "" if sz == "M" else "_" + sz
+            k = V.body_k(st, sz)
+            J.append((f"body_{st}{suf}", "body", (st, k), "body"))
+            J.append((f"bottom_{st}{suf}", "bottom", (st, k), "none"))
     J.append(("neck", "neck", (), "none"))
     J.append(("bracket_L", "bracket", (-1,), "bracket"))
     J.append(("bracket_R", "bracket", (1,), "bracket"))
@@ -58,10 +67,10 @@ def build(job):
         s = V.mouth_parts(m)[i][1].translate((0, V.Y_HEAD, V.Z_HEAD))
     elif kind == "body":
         import bodies as B
-        s = B.body(*args) if args[0] in B.STYLES else V.body(*args)
+        s = B.any_body(*args)
     elif kind == "bottom":
         import bodies as B
-        s = B.bottom_plate(*args) if args[0] in B.STYLES else V.bottom_plate(*args)
+        s = B.any_bottom(*args)
     elif kind == "neck":
         s = R.neck().translate((0, 0, R.BH))
     elif kind == "bracket":
@@ -105,7 +114,9 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     J = jobs()
     only = sys.argv[1:]
-    if only:
+    if only == ["--sizes"]:   # jen zmensene / zvetsene varianty (M se nemeni)
+        J = [j for j in J if j[0].endswith(("_S", "_L"))]
+    elif only:
         J = [j for j in J if any(j[0].startswith(o) for o in only)]
     print(len(J), "dilu")
     n = int(os.environ.get("JOBS", "1"))
@@ -124,9 +135,31 @@ if __name__ == "__main__":
         mats[pid] = M
         print(f"{pid:32s} {nf:7d} trojuhelniku")
     json.dump(mats, open(idx_path, "w"), indent=0)
-    import variants as V
-    meta = {"HH": V.HH, "headTop": {st: round(V.head_top(st), 2) for st in V.HEAD_STYLES},
-            "badgeMount": {st: [round(float(v), 6) for v in __import__("bodies").badge_mount(st).T.flatten()]
-                           for st in __import__("bodies").STYLES},
+    import variants as V, bodies as B, trimesh
+    mat = lambda M: [round(float(v), 6) for v in M.T.flatten()]
+    BODY_ST = ["hranate"] + B.STYLES
+    meta = {"HH": V.HH, "BH": V.BH,
+            "headTop": {st: round(V.head_top(st), 2) for st in V.HEAD_STYLES},
+            "headTopSz": {st: {sz: round(V.head_top(st, V.head_k(st, sz)), 2) for sz in V.HEAD_SIZES} for st in V.HEAD_STYLES},
+            "bodyH": {st: {sz: round(B.body_height(st, V.body_k(st, sz)), 2) for sz in V.BODY_SIZES} for st in BODY_ST},
+            "bodyNA": [f"{st}_{sz}" for st, sz in sorted(V.BODY_SIZE_NA)],
+            "mouthNA": [f"{st}_{m}_{sz}" for st in V.HEAD_STYLES for m in V.MOUTHS for sz in V.HEAD_SIZES
+                        if not V.mouth_fits(st, m, sz)],
+            "badgeMount": {st: mat(B.badge_mount(st)) for st in B.STYLES},
+            "badgeMountSz": {f"{st}_{sz}": mat(B.badge_mount(st, V.body_k(st, sz)))
+                             for st in BODY_ST for sz in V.BODY_SIZES if (st, sz) not in V.BODY_SIZE_NA},
+            "support": {f"{st}_{sz}": [[round(x, 1), round(y, 1)] for x, y in B.support(st, V.body_k(st, sz))]
+                        for st in BODY_ST for sz in V.BODY_SIZES if (st, sz) not in V.BODY_SIZE_NA},
             "badge": {"w": V.BADGE_W, "h": V.BADGE_H, "r": V.BADGE_R, "t": V.BADGE_T, "sym": V.SYM_D}}
-    json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=1)
+    # objem a teziste kazdeho dilu v sestave (pro odhad stability)
+    mass = {}
+    for pid, M in mats.items():
+        f = os.path.join(OUT, pid + ".stl")
+        if not os.path.exists(f):
+            continue
+        m = trimesh.load(f)
+        m.apply_transform(np.array(M).reshape(4, 4).T)
+        c = m.center_mass if m.is_volume else m.centroid
+        mass[pid] = [round(float(abs(m.volume)), 0)] + [round(float(v), 1) for v in c]
+    meta["mass"] = mass
+    json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=0)
