@@ -36,6 +36,13 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);m
 .note ul{color:var(--txt)}#customBox{color:var(--txt);background:#141d23;border-color:var(--line)}
 #customBox input{margin:6px 0;max-width:100%}
 a{color:var(--acc)}
+#arModal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:10;padding:12px}
+.mbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(680px,100%);max-height:100%;overflow:auto}
+.mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.mhead .btn{padding:6px 12px}
+#mv{width:100%;height:min(52vh,440px);background:radial-gradient(circle at 50% 40%,#1f2a33,#0d1216 70%);border-radius:10px;--poster-color:transparent}
+.arbtn{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:auto!important;padding:10px 18px!important}
+#arQr{display:flex;gap:14px;align-items:center;margin-top:10px}#arQr.hide{display:none}
+#qr{flex:none;width:150px;background:#fff;border-radius:8px;line-height:0}#qr svg{width:100%;height:auto}
 ul{margin:6px 0;padding-left:18px}
 @media (max-width:820px){#app{flex-direction:column;height:auto}#view{height:58vh;flex:none}#panel{width:auto;border-left:0;border-top:1px solid var(--line)}}
 </style>
@@ -79,6 +86,7 @@ ul{margin:6px 0;padding-left:18px}
 
   <button class="btn pri" id="dl" data-t="download">Stáhnout pro tisk (ZIP)</button>
   <div class="small dim" style="margin-top:8px" data-t="dl_note">ZIP obsahuje 4 soubory 3MF (hlava, tělo a víka, oči s držáky, anténa a znak) s přiřazenými barvami a návod. Všechny díly se tisknou bez podpěr.</div>
+  <button class="btn" id="ar" style="width:100%;margin-top:10px" data-t="ar">Ukázat u sebe na stole (AR)</button>
   <button class="btn" id="share" style="width:100%;margin-top:10px" data-t="share">Zkopírovat odkaz na tuhle konfiguraci</button>
   <div class="small dim" id="msg" style="margin-top:6px"></div>
 
@@ -88,6 +96,19 @@ ul{margin:6px 0;padding-left:18px}
    <li><a href="https://github.com/Frenkeeone/nw3d-01" data-t="l_gh">Zdrojové soubory, STEP a montáž (GitHub)</a></li>
   </ul>
   <div class="small dim" data-t="lic">Modely: CC BY-NC-SA 4.0 (nekomerčně).</div>
+ </div>
+</div>
+<div id="arModal" class="hide">
+ <div class="mbox">
+  <div class="mhead"><b data-t="ar_title">Robot ve skutečné velikosti</b><button class="btn" id="arClose" data-t="ar_close">Zavřít</button></div>
+  <model-viewer id="mv" ar ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor" camera-controls touch-action="pan-y"
+    shadow-intensity="1" tone-mapping="neutral" exposure="0.95" camera-orbit="20deg 75deg auto" interaction-prompt="none">
+   <button slot="ar-button" class="btn pri arbtn" data-t="ar_place">Postavit na stůl</button>
+  </model-viewer>
+  <div class="small dim" id="arInfo"></div>
+  <div id="arQr" class="hide"><div id="qr"></div><div class="small" data-t="ar_qr">Naskenuj kód telefonem – robot se otevře ve stejné konfiguraci a postavíš si ho na stůl ve skutečné velikosti.</div></div>
+  <div class="note hide" id="arNoMob" data-t="ar_nomob">Tenhle prohlížeč AR neumí. Zkus Chrome na Androidu (se Službami Google Play pro AR) nebo Safari na iPhonu.</div>
+  <div class="small dim" data-t="ar_note">Skutečná velikost. Vlastní logo se odkazem nepřenáší.</div>
  </div>
 </div>
 <script type="module" src="app.js"></script>

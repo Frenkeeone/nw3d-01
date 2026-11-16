@@ -5,6 +5,8 @@ import { OrbitControls } from './lib/OrbitControls.js';
 import { STLLoader } from './lib/STLLoader.js';
 import { SVGLoader } from './lib/SVGLoader.js';
 import { zipSync, strToU8 } from './lib/fflate.js';
+import { GLTFExporter } from './lib/GLTFExporter.js';
+import qrcode from './lib/qrcode.mjs';
 
 const $ = id => document.getElementById(id);
 
@@ -12,6 +14,10 @@ const $ = id => document.getElementById(id);
 const T = {
   cs: {},
   en: {
+    ar: 'View in your space (AR)', ar_title: 'Your robot at real size', ar_place: 'Place on your desk',
+    ar_qr: 'Scan the code with your phone – the robot opens in the same configuration and you can place it on your desk at real size.',
+    ar_nomob: 'This browser cannot do AR. Try Chrome on Android (with Google Play Services for AR) or Safari on iPhone.',
+    ar_note: 'Real size. A custom logo is not carried over by the link.', ar_close: 'Close',
     intro: 'Build your robot, pick colours and download 3MF files ready to print. Rotate the preview with your mouse or finger.',
     h_head: 'Head', h_body: 'Body', h_mouth: 'Mouth', h_eyes: 'Eyes', same: 'same for both eyes', left: 'left', right: 'right',
     h_ant: 'Antenna', h_badge: 'Chest emblem', h_colors: 'Colours', col_note: 'Shades roughly match Bambu PLA Basic filaments.',
@@ -147,9 +153,10 @@ function eyeTexture() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 const eyeMat = new THREE.MeshBasicMaterial({ map: eyeTexture() });
+const eyeDiscs = [];
 for (const x of [-28.5, 28.5]) {
   const d = new THREE.Mesh(new THREE.CircleGeometry(16.6, 48), eyeMat);
-  d.rotation.x = Math.PI / 2; d.position.set(x, -29.3, 107); scene.add(d);
+  d.rotation.x = Math.PI / 2; d.position.set(x, -29.3, 107); scene.add(d); eyeDiscs.push(d);
 }
 
 let MATS = {};   // id dilu -> matice do sestavy
@@ -499,6 +506,61 @@ $('dl').onclick = async () => {
   }
   btn.disabled = false;
 };
+
+// ------------------------------------------------------------------ AR nahled
+// Viditelne dily -> GLB v metrech (glTF je Y nahoru) -> <model-viewer> s ar-scale="fixed" = skutecna velikost.
+let arUrl = null, mvLoaded = null;
+async function buildGlb() {
+  const inner = new THREE.Group();
+  for (const [, m] of meshes) {
+    if (!m.visible) continue;
+    const c = new THREE.Mesh(m.geometry, m.material);
+    c.matrixAutoUpdate = false; c.matrix.copy(m.matrix); inner.add(c);
+  }
+  for (const d of eyeDiscs) inner.add(d.clone());
+  inner.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(inner);
+  const cx = (box.min.x + box.max.x) / 2, cy = (box.min.y + box.max.y) / 2;
+  const mid = new THREE.Group(); mid.position.set(-cx, -cy, -box.min.z); mid.add(inner);
+  const root = new THREE.Group(); root.name = 'NW3D-01';
+  root.rotation.x = -Math.PI / 2; root.scale.setScalar(0.001); root.add(mid);
+  const glb = await new GLTFExporter().parseAsync(root, { binary: true });
+  return { blob: new Blob([glb], { type: 'model/gltf-binary' }), size: box.getSize(new THREE.Vector3()) };
+}
+function showQr() {
+  saveHash();
+  const qr = qrcode(0, 'M'); qr.addData(location.href); qr.make();
+  $('qr').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 3, scalable: true });
+  $('arQr').classList.remove('hide');
+}
+$('ar').onclick = async () => {
+  const btn = $('ar'); btn.disabled = true;
+  $('arModal').classList.remove('hide'); $('arQr').classList.add('hide'); $('arNoMob').classList.add('hide');
+  $('arInfo').textContent = lang === 'cs' ? 'Připravuji model…' : 'Preparing the model…';
+  try {
+    mvLoaded = mvLoaded || import('./lib/model-viewer.min.js');
+    const [{ blob, size }] = await Promise.all([buildGlb(), mvLoaded]);
+    if (arUrl) URL.revokeObjectURL(arUrl);
+    arUrl = URL.createObjectURL(blob);
+    const cm = v => (v / 10).toFixed(1).replace('.', lang === 'cs' ? ',' : '.');
+    $('arInfo').textContent = (lang === 'cs' ? 'Výška ' : 'Height ') + cm(size.z) + ' cm · ' + (lang === 'cs' ? 'šířka ' : 'width ') + cm(size.x) + ' cm';
+    const mv = $('mv');
+    const ready = new Promise((res, rej) => {
+      mv.addEventListener('load', res, { once: true });
+      mv.addEventListener('error', e => rej(new Error('model-viewer')), { once: true });
+    });
+    mv.setAttribute('src', arUrl);
+    await ready;
+    if (!mv.canActivateAR) {
+      if (matchMedia('(pointer:coarse)').matches) $('arNoMob').classList.remove('hide'); else showQr();
+    }
+  } catch (e) {
+    console.error(e); $('arInfo').textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false;
+};
+$('arClose').onclick = () => $('arModal').classList.add('hide');
+$('arModal').onclick = e => { if (e.target === $('arModal')) $('arModal').classList.add('hide'); };
 
 // ------------------------------------------------------------------ start
 try { lang = localStorage.getItem('lang') || (/^(cs|sk)/i.test(navigator.language || '') ? 'cs' : 'en'); } catch (e) {}
