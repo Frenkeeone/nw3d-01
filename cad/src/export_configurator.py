@@ -24,7 +24,8 @@ def jobs():
     for m in V.MOUTHS:
         for i, (role, _) in enumerate(V.mouth_shapes(m)):
             J.append((f"mouth_{m}_{i}", "mouth", (m, i), "head"))
-    for st in V.BODY_STYLES:
+    import bodies as B
+    for st in ["hranate"] + B.STYLES:
         J.append((f"body_{st}", "body", (st,), "body"))
         J.append((f"bottom_{st}", "bottom", (st,), "none"))
     J.append(("neck", "neck", (), "none"))
@@ -56,9 +57,11 @@ def build(job):
         m, i = args
         s = V.mouth_parts(m)[i][1].translate((0, V.Y_HEAD, V.Z_HEAD))
     elif kind == "body":
-        s = V.body(*args)
+        import bodies as B
+        s = B.body(*args) if args[0] in B.STYLES else V.body(*args)
     elif kind == "bottom":
-        s = V.bottom_plate(*args)
+        import bodies as B
+        s = B.bottom_plate(*args) if args[0] in B.STYLES else V.bottom_plate(*args)
     elif kind == "neck":
         s = R.neck().translate((0, 0, R.BH))
     elif kind == "bracket":
@@ -123,5 +126,7 @@ if __name__ == "__main__":
     json.dump(mats, open(idx_path, "w"), indent=0)
     import variants as V
     meta = {"HH": V.HH, "headTop": {st: round(V.head_top(st), 2) for st in V.HEAD_STYLES},
+            "badgeMount": {st: [round(float(v), 6) for v in __import__("bodies").badge_mount(st).T.flatten()]
+                           for st in __import__("bodies").STYLES},
             "badge": {"w": V.BADGE_W, "h": V.BADGE_H, "r": V.BADGE_R, "t": V.BADGE_T, "sym": V.SYM_D}}
     json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=1)

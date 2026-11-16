@@ -27,7 +27,7 @@ const T = {
 };
 const OPT = {
   head: [['hranata', 'Hranatá', 'Boxy'], ['kulata', 'Kulatá', 'Round'], ['kopule', 'Kopule', 'Dome'], ['vejce', 'Vejce', 'Egg']],
-  body: [['hranate', 'Hranaté', 'Angular'], ['oble', 'Oblé', 'Rounded'], ['kapsle', 'Kapsle', 'Capsule']],
+  body: [['hranate', 'Klasik', 'Classic'], ['valec', 'Válec', 'Cylinder'], ['soudek', 'Soudek', 'Barrel'], ['zvon', 'Zvon', 'Bell'], ['pasy', 'Pásy', 'Tracks']],
   mouth: [['pruh', 'Výstražný pruh', 'Warning stripe'], ['mrizka', 'Mřížka', 'Grille'], ['usmev', 'Úsměv', 'Smile'],
           ['zadna', 'Bez pusy', 'No mouth']],
   eye: [['klasik', 'Klasik', 'Classic'], ['nyty', 'Nýty', 'Rivets'], ['sestihran', 'Šestihran', 'Hexagon'],
@@ -187,6 +187,11 @@ async function syncScene() {
     }
     m.visible = true;
     m.material = material(col(p.role));
+    if (p.id.startsWith('badge_') || p.id.startsWith('custom_')) {   // stitek na celni plose zvoleneho tela
+      m.matrix.fromArray(MATS[p.id] || MATS['badge_prazdny_0']);
+      const mount = META.badgeMount && META.badgeMount[S.body];
+      if (mount) m.matrix.premultiply(new THREE.Matrix4().fromArray(mount));
+    }
     if (p.id.startsWith('antenna_')) {     // antena sedi na temeni zvolene hlavy
       m.matrix.fromArray(MATS[p.id]);
       m.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, 0, META.headTop[S.head] - META.HH));
