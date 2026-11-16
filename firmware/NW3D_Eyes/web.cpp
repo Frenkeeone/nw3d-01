@@ -17,6 +17,8 @@
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <Update.h>
+#include "mbedtls/sha256.h"
+#include "esp_random.h"
 
 namespace web {
 
@@ -30,6 +32,59 @@ static const uint8_t* s_fb[2] = {nullptr, nullptr};
 static bambu::Device s_devs[8];
 static int s_devN = 0;
 static String s_uploadErr;
+
+// ---------------- Heslo k webu (volitelne) ----------------
+// V robotovi je ulozen jen otisk SHA-256(sul + heslo). Prihlaseni = nahodny klic v cookie,
+// platny do restartu robota. Nic z toho neopousti robota.
+static String s_sessions[4];
+static int s_sessNext = 0;
+
+static String randHex(int bytes) {
+  String o;
+  for (int i = 0; i < bytes; i++) { char b[3]; snprintf(b, sizeof b, "%02x", (unsigned)(esp_random() & 0xFF)); o += b; }
+  return o;
+}
+
+static String hashPw(const String& salt, const String& pw) {
+  String in = salt + pw;
+  uint8_t out[32];
+  mbedtls_sha256((const unsigned char*)in.c_str(), in.length(), out, 0);
+  String h;
+  for (int i = 0; i < 32; i++) { char b[3]; snprintf(b, sizeof b, "%02x", out[i]); h += b; }
+  return h;
+}
+
+static bool pwSet() { return cfg::get().pwHash.length() == 64; }
+
+static bool checkPw(const String& pw) {
+  DevCfg c = cfg::get();
+  if (c.pwHash.length() != 64) return true;
+  String h = hashPw(c.pwSalt, pw);
+  uint8_t diff = 0;                       // porovnani v konstantnim case
+  for (int i = 0; i < 64; i++) diff |= h[i] ^ c.pwHash[i];
+  return diff == 0;
+}
+
+static bool authed() {
+  if (!pwSet()) return true;
+  String ck = s_srv.header("Cookie");
+  int i = ck.indexOf("nw3d=");
+  if (i < 0) return false;
+  int e = ck.indexOf(';', i);
+  String tok = ck.substring(i + 5, e < 0 ? ck.length() : e);
+  tok.trim();
+  if (tok.length() != 32) return false;
+  for (auto& s : s_sessions) if (s.length() && s == tok) return true;
+  return false;
+}
+
+// Obal pro chranene adresy: bez prihlaseni vrati 401
+static bool guard() {
+  if (authed()) return true;
+  s_srv.sendHeader("Cache-Control", "no-store");
+  s_srv.send(401, "application/json", "{\"ok\":false,\"auth\":true}");
+  return false;
+}
 
 void setScreenName(const char* n) {
   portENTER_CRITICAL(&s_mux);
@@ -154,6 +209,7 @@ static void sendState() {
   c["email"] = C.email;
   c["region"] = C.region;
   c["logged"] = C.token.length() > 20;
+  c["pw"] = C.pwHash.length() == 64;
   c["city"] = C.city;
   c["tzname"] = C.tzName;
   if (C.hasLocation()) { c["lat"] = C.lat; c["lon"] = C.lon; }
@@ -438,6 +494,35 @@ static void handleFactory() {
   ESP.restart();
 }
 
+static void handleLogin2() {
+  static uint32_t lastFail = 0;
+  if (lastFail && millis() - lastFail < 1500) { sendErr("wait"); return; }   // zpomaleni hadani
+  if (!checkPw(s_srv.arg("pass"))) { lastFail = millis(); sendErr("wrong password"); return; }
+  String tok = randHex(16);
+  s_sessions[s_sessNext] = tok;
+  s_sessNext = (s_sessNext + 1) % 4;
+  s_srv.sendHeader("Set-Cookie", "nw3d=" + tok + "; Path=/; HttpOnly; SameSite=Strict");
+  sendOk();
+}
+
+static void handlePassword() {
+  String np = s_srv.arg("new");
+  if (np.length() > 64) { sendErr("too long"); return; }
+  if (np.length() > 0 && np.length() < 4) { sendErr("too short"); return; }
+  DevCfg c = cfg::get();
+  if (np.isEmpty()) { c.pwHash = ""; c.pwSalt = ""; }
+  else { c.pwSalt = randHex(8); c.pwHash = hashPw(c.pwSalt, np); }
+  cfg::set(c);
+  for (auto& s : s_sessions) s = "";
+  if (np.length()) {                       // kdo heslo nastavil, zustane prihlaseny
+    String tok = randHex(16);
+    s_sessions[0] = tok;
+    s_sessNext = 1;
+    s_srv.sendHeader("Set-Cookie", "nw3d=" + tok + "; Path=/; HttpOnly; SameSite=Strict");
+  }
+  sendOk();
+}
+
 // Nastavovaci sit: vsechny cizi adresy presmerovat na stranku robota (captive portal)
 static bool captive() {
   if (wifimgr::state() != wifimgr::State::Portal) return false;
@@ -457,26 +542,30 @@ static void task(void*) {
     s_srv.sendHeader("Cache-Control", "no-store");
     s_srv.send_P(200, "text/html; charset=utf-8", WEB_PAGE);
   });
-  s_srv.on("/api/state", HTTP_GET, sendState);
-  s_srv.on("/api/set", HTTP_POST, handleSet);
-  s_srv.on("/api/frame", HTTP_GET, sendFrame);
-  s_srv.on("/api/test", HTTP_POST, [] { s_test = true; sendOk(); });
-  s_srv.on("/api/sound", HTTP_POST, [] { s_sound = true; sendOk(); });
-  s_srv.on("/api/reset", HTTP_POST, [] { settings::reset(); sendState(); });
-  s_srv.on("/api/factory", HTTP_POST, handleFactory);
-  s_srv.on("/api/scan", HTTP_GET, handleScan);
-  s_srv.on("/api/wifi", HTTP_POST, handleWifi);
-  s_srv.on("/api/bambu/login", HTTP_POST, handleLogin);
-  s_srv.on("/api/bambu/code", HTTP_POST, handleCode);
-  s_srv.on("/api/bambu/tfa", HTTP_POST, handleTfa);
-  s_srv.on("/api/bambu/token", HTTP_POST, handleToken);
-  s_srv.on("/api/bambu/logout", HTTP_POST, handleLogout);
-  s_srv.on("/api/bambu/devices", HTTP_GET, handleDevices);
-  s_srv.on("/api/printer", HTTP_POST, handlePrinter);
-  s_srv.on("/api/location", HTTP_POST, handleLocation);
-  s_srv.on("/api/ota/check", HTTP_POST, [] { ota::requestCheck(); sendOk(); });
-  s_srv.on("/api/ota/install", HTTP_POST, [] { ota::requestInstall(); sendOk(); });
-  s_srv.on("/api/ota/upload", HTTP_POST, handleUploadDone, handleUpload);
+  s_srv.on("/api/state", HTTP_GET, [] { if (guard()) sendState(); });
+  s_srv.on("/api/set", HTTP_POST, [] { if (guard()) handleSet(); });
+  s_srv.on("/api/frame", HTTP_GET, [] { if (guard()) sendFrame(); });
+  s_srv.on("/api/test", HTTP_POST, [] { if (!guard()) return; s_test = true; sendOk(); });
+  s_srv.on("/api/sound", HTTP_POST, [] { if (!guard()) return; s_sound = true; sendOk(); });
+  s_srv.on("/api/reset", HTTP_POST, [] { if (!guard()) return; settings::reset(); sendState(); });
+  s_srv.on("/api/factory", HTTP_POST, [] { if (guard()) handleFactory(); });
+  s_srv.on("/api/scan", HTTP_GET, [] { if (guard()) handleScan(); });
+  s_srv.on("/api/wifi", HTTP_POST, [] { if (guard()) handleWifi(); });
+  s_srv.on("/api/bambu/login", HTTP_POST, [] { if (guard()) handleLogin(); });
+  s_srv.on("/api/bambu/code", HTTP_POST, [] { if (guard()) handleCode(); });
+  s_srv.on("/api/bambu/tfa", HTTP_POST, [] { if (guard()) handleTfa(); });
+  s_srv.on("/api/bambu/token", HTTP_POST, [] { if (guard()) handleToken(); });
+  s_srv.on("/api/bambu/logout", HTTP_POST, [] { if (guard()) handleLogout(); });
+  s_srv.on("/api/bambu/devices", HTTP_GET, [] { if (guard()) handleDevices(); });
+  s_srv.on("/api/printer", HTTP_POST, [] { if (guard()) handlePrinter(); });
+  s_srv.on("/api/location", HTTP_POST, [] { if (guard()) handleLocation(); });
+  s_srv.on("/api/ota/check", HTTP_POST, [] { if (!guard()) return; ota::requestCheck(); sendOk(); });
+  s_srv.on("/api/ota/install", HTTP_POST, [] { if (!guard()) return; ota::requestInstall(); sendOk(); });
+  s_srv.on("/api/ota/upload", HTTP_POST, [] { if (guard()) handleUploadDone(); }, [] { if (authed()) handleUpload(); });
+  s_srv.on("/api/login", HTTP_POST, handleLogin2);
+  s_srv.on("/api/password", HTTP_POST, [] { if (guard()) handlePassword(); });
+  const char* hdrs[] = {"Cookie"};
+  s_srv.collectHeaders(hdrs, 1);
   s_srv.onNotFound([] {
     if (captive()) return;
     s_srv.send(404, "text/plain", "not found");

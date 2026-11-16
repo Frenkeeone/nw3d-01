@@ -44,7 +44,12 @@ No computer at hand? A robot without Wi-Fi settings opens its own network **NW3D
 The filament amount is an estimate from the model volume; your slicer will tell you exactly.
 
 ## Privacy
-Wi-Fi, settings and the Bambu access token stay on the robot. Your password is used once to obtain the token and is never stored. The robot talks only to your printer, Bambu Lab servers, Open-Meteo, Yahoo Finance and GitHub. Its web page is reachable only in your home network and has no password, so anyone on your network can change its settings.
+**The author of this project does not collect, receive or have access to any of your data.** There is no server, account or analytics run by the author.
+- Wi-Fi credentials, settings, the Bambu access token and the optional web-page password stay **only in the robot's memory**. The password is stored as a salted SHA-256 hash, never in plain text.
+- Your Bambu password is used once to obtain the token and is never stored.
+- The robot connects only to your printer, Bambu Lab servers (cloud mode), Open-Meteo (weather), Yahoo Finance (tickers) and GitHub (update check).
+- The installer page is static and hosted on GitHub Pages; the installer script is loaded from unpkg.com. Like any website, these services see visitors' IP addresses under their own privacy policies.
+- The robot's web page is reachable only in your home network. You can protect it with a password (System → Password). Forgot it? Reinstall the firmware with "erase device".
 
 ## Licence
 - Firmware and scripts: [MIT](LICENSE)
@@ -72,6 +77,6 @@ NW3D-01 je stolní robot z 3D tiskárny. Jeho kulaté displeje-oči ukazují pr�
 
 Bez počítače: robot, který nezná Wi-Fi, vytvoří vlastní síť **NW3D-xxxx**. Připoj se k ní telefonem a otevře se nastavení.
 
-**Soukromí:** Wi-Fi, nastavení a přístupový token zůstávají jen v robotovi. Heslo k Bambu účtu se použije jednou a neukládá se.
+**Soukromí:** **autor projektu žádná vaše data nesbírá, nedostává ani k nim nemá přístup** – neprovozuje žádný server ani analytiku. Wi-Fi, nastavení, přístupový token a volitelné heslo k webu robota zůstávají jen v paměti robota (heslo jen jako otisk SHA-256 se solí). Heslo k Bambu účtu se použije jednou a neukládá se. Robot komunikuje jen s vaší tiskárnou, servery Bambu Lab, Open-Meteo, Yahoo Finance a GitHubem. Instalační stránka je statická na GitHub Pages (instalátor se načítá z unpkg.com); tyto služby vidí IP adresy návštěvníků podle svých pravidel. Web robota lze chránit heslem (Systém → Heslo); zapomenuté heslo = znovu nahrát firmware se smazáním zařízení.
 
 **Licence:** firmware MIT, modely CC BY-NC-SA 4.0 (nekomerčně). Logo NorthWeave3D na hrudi licencí pokryté není.

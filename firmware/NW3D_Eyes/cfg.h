@@ -18,6 +18,7 @@ struct DevCfg {
   String  city;
   String  tz = "CET-1CEST,M3.5.0,M10.5.0/3";
   String  tzName = "Europe/Prague";
+  String  pwHash, pwSalt;      // heslo k webu robota (jen otisk SHA-256 se soli), prazdne = bez hesla
 
   bool printerReady() const {
     if (sn.length() < 6) return false;

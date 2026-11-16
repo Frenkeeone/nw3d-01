@@ -20,6 +20,7 @@ static void save(const DevCfg& c) {
   s_p.putUChar("region", c.region);
   s_p.putFloat("lat", c.lat);      s_p.putFloat("lon", c.lon);       s_p.putString("city", c.city);
   s_p.putString("tz", c.tz);       s_p.putString("tzname", c.tzName);
+  s_p.putString("pwh", c.pwHash);  s_p.putString("pws", c.pwSalt);
   s_p.putUChar("v", 1);
 }
 
@@ -33,6 +34,7 @@ static DevCfg load() {
   c.region = s_p.getUChar("region", 0);
   c.lat = s_p.getFloat("lat", NAN);     c.lon = s_p.getFloat("lon", NAN);      c.city = s_p.getString("city", "");
   c.tz = s_p.getString("tz", c.tz);     c.tzName = s_p.getString("tzname", c.tzName);
+  c.pwHash = s_p.getString("pwh", "");  c.pwSalt = s_p.getString("pws", "");
   return c;
 }
 

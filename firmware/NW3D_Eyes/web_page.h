@@ -54,6 +54,14 @@ details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-top:10px}
 <header><h1>NW3D-<b>01</b></h1><span class="chip" id="scr">…</span>
 <span class="lang"><button data-l="0">CS</button> <button data-l="1">EN</button></span></header>
 
+<section class="card hide" id="login">
+ <h3 data-t="login_t">Robot je chráněný heslem</h3>
+ <input type="password" id="lgpass" class="full" autocomplete="current-password">
+ <div id="lgmsg" class="small" style="margin-top:8px"></div>
+ <button class="wide pri" id="lggo" data-t="login_b">Přihlásit</button>
+ <p class="small dim" data-t="login_forgot">Zapomenuté heslo: nahraj firmware znovu přes instalační stránku se smazáním zařízení (smaže i ostatní nastavení).</p>
+</section>
+
 <!-- ================= PRUVODCE ================= -->
 <section class="card hide" id="wiz">
  <div class="steps" id="wsteps"></div>
@@ -249,6 +257,12 @@ details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-top:10px}
   <span class="dim" data-t="preview">Náhled modelu</span><span id="cov">–</span>
   <span class="dim" data-t="uptime">Běží</span><span id="up">–</span>
  </div>
+ <details><summary data-t="pw_t">Heslo k této stránce</summary>
+  <p class="dim" data-t="pw_d">Volitelné. Heslo se uloží jen v robotovi (jako otisk), nikam se neodesílá. Prázdné pole = bez hesla.</p>
+  <input type="password" id="pwnew" class="full" autocomplete="new-password" data-tp="pw_new">
+  <input type="password" id="pwnew2" class="full" style="margin-top:6px" autocomplete="new-password" data-tp="pw_new2">
+  <div id="pwmsg" class="small" style="margin-top:6px"></div>
+  <button class="sm" id="pwgo" style="margin-top:6px" data-t="pw_save">Uložit heslo</button></details>
  <button class="wide" id="reset" data-t="reset_look">Obnovit výchozí vzhled</button>
  <button class="wide" id="factory" data-t="factory">Tovární nastavení (smaže i Wi-Fi a účet)</button>
  <p class="dim" data-t="privacy">Soukromí: všechna nastavení, Wi-Fi a přístupový token zůstávají jen v robotovi. Robot komunikuje jen s tvou tiskárnou, se servery Bambu Lab (cloud), Open-Meteo (počasí), Yahoo Finance (kurzy) a GitHub (aktualizace). Stránka je dostupná jen v tvé domácí síti.</p>
@@ -272,9 +286,10 @@ sound:'Sound',volume:'Volume',s_fin:'Play when a print finishes',s_err:'Play whe
 connection:'Connection',account:'Account',place:'Location',ch_wifi:'Change Wi-Fi',ch_printer:'Change printer',ch_loc:'Change location',wizard:'Setup wizard',
 updates:'Updates',installed:'Installed',newest:'Latest',check:'Check',install:'Install',manual_up:'Upload a file manually (.bin)',upload:'Upload',manual_hint:'Use the nw3d-01-ota.bin file from a GitHub release.',
 system:'System',signal:'Wi-Fi signal',ipaddr:'IP address',preview:'Model preview',uptime:'Uptime',reset_look:'Reset look to defaults',factory:'Factory reset (also erases Wi-Fi and account)',
+login_t:'This robot is password protected',login_b:'Sign in',login_forgot:'Forgot the password: reinstall the firmware from the installer page with "erase device" (this also erases the other settings).',pw_t:'Password for this page',pw_d:'Optional. The password is stored only in the robot (as a hash) and never sent anywhere. Empty = no password.',pw_new:'new password',pw_new2:'repeat the password',pw_save:'Save password',
 privacy:'Privacy: all settings, Wi-Fi and the access token stay in the robot only. It talks only to your printer, Bambu Lab servers (cloud), Open-Meteo (weather), Yahoo Finance (tickers) and GitHub (updates). This page is reachable only in your home network.'
 }};
-const M={cs:{connecting:'Připojuji…',wifi_ok:'Připojeno.',scan_wait:'Hledám sítě…',no_net:'Vyber síť.',login_wait:'Přihlašuji…',need_code:'Bambu poslal kód na tvůj e-mail. Opiš ho sem.',need_tfa:'Zadej kód z ověřovací aplikace.',logged:'Přihlášeno.',loading:'Načítám tiskárny…',no_dev:'Na účtu nejsou žádné tiskárny.',
+const M={cs:{pw_mismatch:'Hesla se neshodují.',pw_short:'Heslo musí mít aspoň 4 znaky.',pw_ok:'Uloženo.',pw_off:'Heslo zrušeno.',wrong:'Špatné heslo.',connecting:'Připojuji…',wifi_ok:'Připojeno.',scan_wait:'Hledám sítě…',no_net:'Vyber síť.',login_wait:'Přihlašuji…',need_code:'Bambu poslal kód na tvůj e-mail. Opiš ho sem.',need_tfa:'Zadej kód z ověřovací aplikace.',logged:'Přihlášeno.',loading:'Načítám tiskárny…',no_dev:'Na účtu nejsou žádné tiskárny.',
 pick_dev:'Vyber tiskárnu.',saving:'Ukládám…',testing:'Zkouším spojení s tiskárnou…',p_ok:'Tiskárna odpovídá ✓',p_slow:'Zatím bez odpovědi – můžeš pokračovat, robot to bude zkoušet dál.',choose:'Vyber možnost.',fill:'Vyplň všechna pole.',
 city_none:'Nic nenalezeno.',city_net:'Vyhledávání potřebuje internet.',city_pick:'Vyber město ze seznamu (nebo pokračuj bez počasí).',idle:'Nečinná',online_wait:'čekám na data',offline:'nepřipojeno',no_tk:'Žádný kurz – přidej ho níže.',max4:'Nejvýš 4 kurzy.',
 upd_none:'Máš nejnovější verzi.',upd_avail:'Je k dispozici nová verze.',upd_run:'Instaluji – neodpojuj napájení…',upd_restart:'Hotovo, robot se restartuje…',confirm_reset:'Vrátit vzhled očí na výchozí hodnoty?',confirm_factory:'Opravdu smazat všechno včetně Wi-Fi a účtu? Robot se pak znovu nastaví přes vlastní Wi-Fi.',
@@ -282,7 +297,7 @@ offline_page:'robot nedostupný',acct:'Účet: ',lan:'LAN',cloud:'cloud',none:'�
 PH:{Printing:'Tiskne',Paused:'Pauza',Preparing:'Příprava',Finished:'Dotisknuto',Failed:'Chyba',Idle:'Nečinná',Unknown:'–'},
 QG:['Komodity','Kryptoměny','Měny','Indexy','Akcie'],
 WN:['střídání','oko','hodiny','hodiny (h)','minuty','datum','počasí – obrázek','počasí – teplota','zbývající čas','procenta + vrstva','průběh vše v jednom','teploty tisku','vypnuto','kurz – cena','kurz – graf','náhled modelu']},
-en:{connecting:'Connecting…',wifi_ok:'Connected.',scan_wait:'Searching…',no_net:'Choose a network.',login_wait:'Signing in…',need_code:'Bambu sent a code to your e-mail. Type it here.',need_tfa:'Enter the code from your authenticator app.',logged:'Signed in.',loading:'Loading printers…',no_dev:'No printers on this account.',
+en:{pw_mismatch:'The passwords do not match.',pw_short:'Use at least 4 characters.',pw_ok:'Saved.',pw_off:'Password removed.',wrong:'Wrong password.',connecting:'Connecting…',wifi_ok:'Connected.',scan_wait:'Searching…',no_net:'Choose a network.',login_wait:'Signing in…',need_code:'Bambu sent a code to your e-mail. Type it here.',need_tfa:'Enter the code from your authenticator app.',logged:'Signed in.',loading:'Loading printers…',no_dev:'No printers on this account.',
 pick_dev:'Choose a printer.',saving:'Saving…',testing:'Testing the printer connection…',p_ok:'Printer responds ✓',p_slow:'No answer yet – you can continue, the robot keeps trying.',choose:'Choose an option.',fill:'Fill in all fields.',
 city_none:'Nothing found.',city_net:'Search needs internet access.',city_pick:'Pick a city from the list (or continue without weather).',idle:'Idle',online_wait:'waiting for data',offline:'not connected',no_tk:'No ticker – add one below.',max4:'Up to 4 tickers.',
 upd_none:'You have the latest version.',upd_avail:'A new version is available.',upd_run:'Installing – do not unplug…',upd_restart:'Done, the robot restarts…',confirm_reset:'Reset the eye look to defaults?',confirm_factory:'Really erase everything including Wi-Fi and account? The robot will then be set up again via its own Wi-Fi.',
@@ -302,7 +317,7 @@ function m(k){return M[lang?'en':'cs'][k]}
 function applyLang(){
  document.documentElement.lang=lang?'en':'cs';
  for(const e of $$('[data-t]')){if(!e.dataset.cs)e.dataset.cs=e.textContent;e.textContent=lang?(L.en[e.dataset.t]||e.dataset.cs):e.dataset.cs}
- for(const e of $$('[data-tp]')){const k=e.dataset.tp;if(!e.dataset.csp)e.dataset.csp=e.placeholder||({ssid_manual:'název sítě',token_ph:'token (cookie „token“ z bambulab.com)',printer_ip:'IP adresa tiskárny',city_ph:'město',custom_sym:'vlastní symbol, např. AAPL'}[k]||'');e.placeholder=lang?(L.en[k]||e.dataset.csp):e.dataset.csp}
+ for(const e of $$('[data-tp]')){const k=e.dataset.tp;if(!e.dataset.csp)e.dataset.csp=e.placeholder||({pw_new:'nové heslo',pw_new2:'heslo znovu',ssid_manual:'název sítě',token_ph:'token (cookie „token“ z bambulab.com)',printer_ip:'IP adresa tiskárny',city_ph:'město',custom_sym:'vlastní symbol, např. AAPL'}[k]||'');e.placeholder=lang?(L.en[k]||e.dataset.csp):e.dataset.csp}
  for(const b of $$('.lang button'))b.classList.toggle('on',+b.dataset.l==lang);
  fillWidgets();fillPresets();
 }
@@ -318,7 +333,10 @@ function seg(id,v){for(const b of $(id).children)b.classList.toggle('on',b.datas
 function hm(x){return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')}
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmt(v){const a=Math.abs(v),d=a>=10000?0:a>=1000?1:a>=1?2:4;return v.toLocaleString(lang?'en-GB':'cs-CZ',{minimumFractionDigits:d,maximumFractionDigits:d})}
-async function post(url,data){const r=await fetch(url,{method:'POST',body:new URLSearchParams(data||{})});return r.json()}
+let locked=false;
+async function f(url,opt){const r=await fetch(url,opt);if(r.status==401){showLogin();throw new Error('auth')}return r}
+function showLogin(){if(locked)return;locked=true;$('login').classList.remove('hide');$('wiz').classList.add('hide');$('mainui').classList.add('hide');$('lgpass').focus()}
+async function post(url,data){const r=await f(url,{method:'POST',body:new URLSearchParams(data||{})});return r.json()}
 function msg(id,t,cls){$(id).textContent=t||'';$(id).className='small '+(cls||'')}
 
 // ---------- stav ----------
@@ -356,7 +374,7 @@ function apply(s){
  if(first){first=false;if(s.portal&&!s.online)openWiz(S.lang<0?'lang':'wifi',true);else if(!S.done)openWiz(S.lang<0?'lang':(C.ssid?'printer':'wifi'))}
  if(wizStep=='portal')$('ptmsg').textContent=s.online?('✓ '+s.ip):'';
 }
-async function load(){try{const r=await fetch('/api/state');apply(await r.json())}catch(e){$('scr').textContent=m('offline_page')}}
+async function load(){if(locked)return;try{const r=await f('/api/state');apply(await r.json())}catch(e){if(!locked)$('scr').textContent=m('offline_page')}}
 async function set(k,v){busy++;try{const s=await post('/api/set',{[k]:v});busy--;apply(s)}catch(e){busy--}}
 
 // ---------- pruvodce ----------
@@ -381,7 +399,7 @@ for(const b of $$('.lang button'))b.onclick=()=>{lang=+b.dataset.l;applyLang();s
 // Wi-Fi
 async function scan(){
  msg('wmsg',m('scan_wait'),'dim');
- try{const l=await (await fetch('/api/scan')).json();const sel=$('wssid');sel.innerHTML='';
+ try{const l=await (await f('/api/scan')).json();const sel=$('wssid');sel.innerHTML='';
   l.sort((a,b)=>b.r-a.r);for(const n of l){const o=document.createElement('option');o.value=n.s;o.textContent=n.s+(n.l?' 🔒':'')+' ('+n.r+' dBm)';sel.appendChild(o)}
   const o=document.createElement('option');o.value='';o.textContent=lang?'other…':'jiná…';sel.appendChild(o);
   if(S0&&S0.cfg.ssid)sel.value=S0.cfg.ssid;$('wssid2').classList.toggle('hide',sel.value!=='');msg('wmsg','')}catch(e){msg('wmsg','')}
@@ -416,7 +434,7 @@ $('dconn').onchange=()=>$('dip').classList.toggle('hide',$('dconn').value!='lan'
 async function loadDevs(){
  msg('pmsg',m('loading'),'dim');$('devlist').innerHTML='';devSel=-1;
  $('dacct').textContent=m('acct')+((S0&&S0.cfg.email)||'');
- try{const r=await (await fetch('/api/bambu/devices')).json();
+ try{const r=await (await f('/api/bambu/devices')).json();
   if(!r.ok){msg('pmsg',r.msg,'err');if(/expired/.test(r.msg)){await post('/api/bambu/logout');await load();selPm('cloud')}return}
   devs=r.list;if(!devs.length){msg('pmsg',m('no_dev'),'warn');return}
   $('devlist').innerHTML=devs.map(d=>'<div class="opt" data-i="'+d.i+'"><input type="radio" name="dv"><div><b>'+esc(d.name||d.sn)+'</b><div class="small dim">'+esc(d.model||'')+' · '+esc(d.sn)+(d.online?' · <span class="ok">online</span>':'')+'</div></div></div>').join('');
@@ -503,7 +521,7 @@ $('qlist').addEventListener('click',e=>{const sym=e.target.dataset.s;if(sym)setT
 $('qadd1').onclick=()=>addTk($('qpre').value);$('qadd2').onclick=()=>{addTk($('qcus').value);$('qcus').value=''};
 
 // ---------- ovladani ----------
-let fe=0;function frames(){if(document.hidden||$('mainui').classList.contains('hide'))return;$('f'+fe).src='/api/frame?e='+fe+'&t='+Date.now();fe^=1}
+let fe=0;function frames(){if(locked||document.hidden||$('mainui').classList.contains('hide'))return;$('f'+fe).src='/api/frame?e='+fe+'&t='+Date.now();fe^=1}
 setInterval(frames,1500);
 $('rot').addEventListener('click',e=>{const v=e.target.dataset.v;if(v!==undefined){seg('rot',v);set('rot',v)}});
 for(const k of['eyes','clock','weather','quotes','swap','sfin','serr'])$(k).addEventListener('change',e=>set(k,e.target.checked?1:0));
@@ -514,9 +532,14 @@ $('ewifi').onclick=()=>openWiz('wifi');$('eprn').onclick=()=>openWiz('printer');
 $('ochk').onclick=async()=>{await post('/api/ota/check');msg('omsg','…','dim');setTimeout(load,4000)};
 $('oinst').onclick=async()=>{await post('/api/ota/install');load()};
 $('oup').onclick=async()=>{const f=$('ofile').files[0];if(!f)return;const fd=new FormData();fd.append('fw',f,f.name);msg('omsg',m('upd_run'),'warn');
- try{const r=await (await fetch('/api/ota/upload',{method:'POST',body:fd})).json();msg('omsg',r.ok?m('upd_restart'):r.msg,r.ok?'ok':'err')}catch(e){msg('omsg','?','err')}};
+ try{const r=await (await f('/api/ota/upload',{method:'POST',body:fd})).json();msg('omsg',r.ok?m('upd_restart'):r.msg,r.ok?'ok':'err')}catch(e){msg('omsg','?','err')}};
 $('reset').onclick=async()=>{if(confirm(m('confirm_reset'))){const s=await post('/api/reset');first=false;busy=0;apply(s)}};
 $('factory').onclick=async()=>{if(confirm(m('confirm_factory'))){await post('/api/factory')}};
+$('lggo').onclick=async()=>{const r=await (await fetch('/api/login',{method:'POST',body:new URLSearchParams({pass:$('lgpass').value})})).json();
+ if(r.ok){locked=false;$('login').classList.add('hide');$('lgpass').value='';first=true;$('mainui').classList.remove('hide');load()}else msg('lgmsg',m('wrong'),'err')};
+$('lgpass').onkeydown=e=>{if(e.key=='Enter')$('lggo').click()};
+$('pwgo').onclick=async()=>{const a=$('pwnew').value,b=$('pwnew2').value;if(a!==b){msg('pwmsg',m('pw_mismatch'),'err');return}
+ if(a&&a.length<4){msg('pwmsg',m('pw_short'),'err');return}const r=await post('/api/password',{new:a});msg('pwmsg',r.ok?(a?m('pw_ok'):m('pw_off')):r.msg,r.ok?'ok':'err');$('pwnew').value=$('pwnew2').value=''};
 lang=(navigator.language||'').toLowerCase().startsWith('cs')||(navigator.language||'').toLowerCase().startsWith('sk')?0:1;
 applyLang();load();setInterval(load,2500);
 </script></body></html>)HTML";
